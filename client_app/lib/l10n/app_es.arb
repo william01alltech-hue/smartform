@@ -1,0 +1,18 @@
+{
+  "@@locale": "es",
+  "appTitle": "Automatización de Formularios",
+  "homeTitle": "Formularios de Inspección",
+  "syncStatus": "Estado de Sincronización",
+  "online": "Conectado",
+  "offline": "Fuera de línea (Guardado)",
+  "syncPending": "Sincronización pendiente: {count}",
+  "saveDraft": "Guardar Borrador",
+  "submitForm": "Enviar Formulario",
+  "noForms": "No hay borradores",
+  "formSaved": "Guardado en borradores locales",
+  "formSynced": "¡Sincronizado con éxito!",
+  "photoField": "Toca para tomar/subir foto",
+  "cropPhoto": "Recortar Foto",
+  "compressing": "Comprimiendo foto...",
+  "selectLanguage": "Seleccionar Idioma"
+}

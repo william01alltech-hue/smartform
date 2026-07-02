@@ -1,0 +1,18 @@
+{
+  "@@locale": "ar",
+  "appTitle": "أتمتة النماذج",
+  "homeTitle": "نماذج الفحص",
+  "syncStatus": "حالة المزامنة",
+  "online": "متصل",
+  "offline": "غير متصل (محفوظ)",
+  "syncPending": "قيد الانتظار: {count}",
+  "saveDraft": "حفظ كمسودة",
+  "submitForm": "إرسال",
+  "noForms": "لا توجد مسودات",
+  "formSaved": "تم الحفظ محلياً",
+  "formSynced": "تمت المزامنة بنجاح!",
+  "photoField": "اضغط لإضافة صورة",
+  "cropPhoto": "قص الصورة",
+  "compressing": "جاري ضغط الصورة...",
+  "selectLanguage": "اختر اللغة"
+}

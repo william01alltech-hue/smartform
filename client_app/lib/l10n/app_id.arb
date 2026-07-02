@@ -1,0 +1,25 @@
+{
+  "@@locale": "id",
+  "appTitle": "Otomatisasi Formulir Konstruksi",
+  "homeTitle": "Formulir Pemeriksaan Lapangan",
+  "syncStatus": "Status Sinkronisasi",
+  "online": "Tersambung",
+  "offline": "Luring (Draf disimpan lokal)",
+  "syncPending": "Menunggu sinkronisasi: {count} formulir",
+  "@syncPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveDraft": "Simpan Draf",
+  "submitForm": "Kirim Formulir",
+  "noForms": "Tidak ada draf tersedia",
+  "formSaved": "Formulir disimpan ke draf lokal",
+  "formSynced": "Sinkronisasi formulir luring berhasil!",
+  "photoField": "Ketuk untuk mengambil foto / unggah",
+  "cropPhoto": "Potong Foto",
+  "compressing": "Mengompres foto...",
+  "selectLanguage": "Pilih Bahasa"
+}

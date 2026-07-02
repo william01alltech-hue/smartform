@@ -1,0 +1,18 @@
+{
+  "@@locale": "ko",
+  "appTitle": "현장 양식 자동화",
+  "homeTitle": "현장 점검 양식",
+  "syncStatus": "동기화 상태",
+  "online": "온라인",
+  "offline": "오프라인 (로컬에 저장됨)",
+  "syncPending": "대기 중인 동기화: {count}개",
+  "saveDraft": "임시 저장",
+  "submitForm": "양식 제출",
+  "noForms": "사용 가능한 임시 저장이 없습니다",
+  "formSaved": "양식이 로컬 임시 저장에 저장되었습니다",
+  "formSynced": "오프라인 양식이 성공적으로 동기화되었습니다!",
+  "photoField": "탭하여 사진 촬영 / 업로드",
+  "cropPhoto": "사진 자르기",
+  "compressing": "사진 압축 중...",
+  "selectLanguage": "언어 선택"
+}

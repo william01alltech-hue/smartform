@@ -1,0 +1,18 @@
+{
+  "@@locale": "ja",
+  "appTitle": "サイトフォーム自動化",
+  "homeTitle": "現場検査フォーム",
+  "syncStatus": "同期ステータス",
+  "online": "オンライン",
+  "offline": "オフライン (ローカルに保存)",
+  "syncPending": "保留中の同期: {count} 件",
+  "saveDraft": "下書きを保存",
+  "submitForm": "フォームを送信",
+  "noForms": "利用可能な下書きはありません",
+  "formSaved": "フォームをローカルの下書きに保存しました",
+  "formSynced": "オフラインフォームの同期に成功しました！",
+  "photoField": "タップして写真を撮影 / アップロード",
+  "cropPhoto": "写真を切り抜き",
+  "compressing": "写真を圧縮中...",
+  "selectLanguage": "言語を選択"
+}

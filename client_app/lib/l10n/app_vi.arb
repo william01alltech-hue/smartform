@@ -1,0 +1,25 @@
+{
+  "@@locale": "vi",
+  "appTitle": "Hệ thống Tự động hóa Biểu mẫu Công trường",
+  "homeTitle": "Biểu mẫu Kiểm tra Công trường",
+  "syncStatus": "Trạng thái Đồng bộ",
+  "online": "Đã kết nối",
+  "offline": "Ngoại tuyến (Bản nháp đã lưu cục bộ)",
+  "syncPending": "Đang chờ đồng bộ: {count} biểu mẫu",
+  "@syncPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveDraft": "Lưu Bản nháp",
+  "submitForm": "Gửi Biểu mẫu",
+  "noForms": "Không có bản nháp",
+  "formSaved": "Biểu mẫu đã được lưu vào bản nháp cục bộ",
+  "formSynced": "Đồng bộ biểu mẫu ngoại tuyến thành công!",
+  "photoField": "Nhấp để chụp ảnh / tải lên",
+  "cropPhoto": "Cắt ảnh",
+  "compressing": "Đang nén ảnh...",
+  "selectLanguage": "Chọn Ngôn ngữ"
+}

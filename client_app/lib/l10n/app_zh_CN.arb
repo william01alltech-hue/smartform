@@ -1,0 +1,25 @@
+{
+  "@@locale": "zh_CN",
+  "appTitle": "工地表单自动化系统",
+  "homeTitle": "工地现场表单",
+  "syncStatus": "同步状态",
+  "online": "已连接",
+  "offline": "离线中 (草稿将储存于本地)",
+  "syncPending": "等待同步表单: {count} 件",
+  "@syncPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveDraft": "储存草稿",
+  "submitForm": "上传表单",
+  "noForms": "目前无表单草稿",
+  "formSaved": "表单已储存至本地草稿",
+  "formSynced": "离线表单同步成功！",
+  "photoField": "点击拍照/上传相片",
+  "cropPhoto": "裁切相片",
+  "compressing": "相片压缩中...",
+  "selectLanguage": "选择语言"
+}

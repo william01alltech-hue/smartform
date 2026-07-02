@@ -1,0 +1,18 @@
+{
+  "@@locale": "pt",
+  "appTitle": "Automação de Formulários",
+  "homeTitle": "Formulários de Inspeção",
+  "syncStatus": "Status de Sincronização",
+  "online": "Conectado",
+  "offline": "Offline (Salvo localmente)",
+  "syncPending": "Sincronização pendente: {count}",
+  "saveDraft": "Salvar Rascunho",
+  "submitForm": "Enviar Formulário",
+  "noForms": "Nenhum rascunho disponível",
+  "formSaved": "Salvo em rascunhos locais",
+  "formSynced": "Sincronizado com sucesso!",
+  "photoField": "Toque para tirar/enviar foto",
+  "cropPhoto": "Cortar Foto",
+  "compressing": "Comprimindo foto...",
+  "selectLanguage": "Selecionar Idioma"
+}
