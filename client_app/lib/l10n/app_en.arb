@@ -1,0 +1,25 @@
+{
+  "@@locale": "en",
+  "appTitle": "Site Form Automation",
+  "homeTitle": "Site Inspection Forms",
+  "syncStatus": "Sync Status",
+  "online": "Connected",
+  "offline": "Offline (Drafts saved locally)",
+  "syncPending": "Pending sync: {count} forms",
+  "@syncPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveDraft": "Save Draft",
+  "submitForm": "Submit Form",
+  "noForms": "No drafts available",
+  "formSaved": "Form saved to local drafts",
+  "formSynced": "Offline forms synced successfully!",
+  "photoField": "Tap to take photo / upload",
+  "cropPhoto": "Crop Photo",
+  "compressing": "Compressing photo...",
+  "selectLanguage": "Select Language"
+}

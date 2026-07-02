@@ -1,0 +1,25 @@
+{
+  "@@locale": "zh_TW",
+  "appTitle": "智表通 - 萬用表單自動化系統",
+  "homeTitle": "智表通 SmartForm",
+  "syncStatus": "同步狀態",
+  "online": "已連線",
+  "offline": "離線中 (草稿將儲存於本地)",
+  "syncPending": "等待同步表單: {count} 件",
+  "@syncPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveDraft": "儲存草稿",
+  "submitForm": "上傳表單",
+  "noForms": "目前無表單草稿",
+  "formSaved": "表單已儲存至本地草稿",
+  "formSynced": "離線表單同步成功！",
+  "photoField": "點擊拍照/上傳相片",
+  "cropPhoto": "裁切相片",
+  "compressing": "相片壓縮中...",
+  "selectLanguage": "選擇語言"
+}

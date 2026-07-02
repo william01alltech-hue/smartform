@@ -1,0 +1,18 @@
+{
+  "@@locale": "de",
+  "appTitle": "Formularautomatisierung",
+  "homeTitle": "Inspektionsformulare",
+  "syncStatus": "Synchronisationsstatus",
+  "online": "Verbunden",
+  "offline": "Offline (Gespeichert)",
+  "syncPending": "Ausstehend: {count} Formulare",
+  "saveDraft": "Entwurf speichern",
+  "submitForm": "Absenden",
+  "noForms": "Keine Entwürfe verfügbar",
+  "formSaved": "In lokalen Entwürfen gespeichert",
+  "formSynced": "Erfolgreich synchronisiert!",
+  "photoField": "Tippen zum Fotografieren",
+  "cropPhoto": "Foto zuschneiden",
+  "compressing": "Foto wird komprimiert...",
+  "selectLanguage": "Sprache auswählen"
+}

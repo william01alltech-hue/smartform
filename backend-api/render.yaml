@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: smartform-backend
+    env: docker
+    plan: free
+    disk:
+      name: smartform-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: SQLITE_DB_PATH
+        value: /data/app_data.sqlite

@@ -1,0 +1,18 @@
+{
+  "@@locale": "fr",
+  "appTitle": "Automatisation des Formulaires",
+  "homeTitle": "Formulaires d'Inspection",
+  "syncStatus": "État de Synchronisation",
+  "online": "Connecté",
+  "offline": "Hors ligne (Enregistré)",
+  "syncPending": "En attente: {count} formulaires",
+  "saveDraft": "Enregistrer Brouillon",
+  "submitForm": "Soumettre",
+  "noForms": "Aucun brouillon disponible",
+  "formSaved": "Enregistré dans les brouillons",
+  "formSynced": "Synchronisés avec succès !",
+  "photoField": "Appuyez pour prendre une photo",
+  "cropPhoto": "Recadrer la Photo",
+  "compressing": "Compression de la photo...",
+  "selectLanguage": "Choisir la Langue"
+}
