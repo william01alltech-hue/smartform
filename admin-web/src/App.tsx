@@ -28,15 +28,6 @@ const parseRangeForUI = (rangeStr: string) => {
   return { sheet: '', cell: rangeStr.replace(/\$/g, '') };
 };
 
-const formatRangeFromUI = (sheet: string, cell: string) => {
-  const match = cell.toUpperCase().match(/^([A-Z]+)([0-9]+)$/);
-  let formattedCell = cell.toUpperCase();
-  if (match) {
-    formattedCell = `$${match[1]}$${match[2]}`;
-  }
-  const safeSheet = sheet.includes(' ') ? `'${sheet}'` : sheet;
-  return safeSheet ? `${safeSheet}!${formattedCell}` : formattedCell;
-};
 
 const STYLE_PRESETS = [
   { id: 'default', name: '預設' },
