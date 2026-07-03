@@ -523,14 +523,14 @@ const Dashboard: React.FC = () => {
       <main style={{ flex: 1, padding: '24px 30px', display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1.2fr) minmax(0, 0.8fr)', gap: '24px', boxSizing: 'border-box' }}>
         
         {/* Column 1 (Right): Excel visual layout preview & cell click */}
-        <div id="preview-section" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div id="preview-section" className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', minHeight: '580px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '18px' }}>📊</span>
             <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>Excel 樣板表格預覽</h2>
           </div>
           
           {visualSheets.length > 0 ? (
-            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', minHeight: '580px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', color: '#94a3b8' }}>💡 點擊下方表格格子即可直接設定對應</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -717,7 +717,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="glass-panel" style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '580px', color: '#94a3b8', textAlign: 'center', gap: '16px' }}>
+            <div style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#94a3b8', textAlign: 'center', gap: '16px' }}>
 
             </div>
           )}
