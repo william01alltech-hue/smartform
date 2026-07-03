@@ -457,18 +457,21 @@ const Dashboard: React.FC = () => {
       {/* Top Header Controls */}
       <div style={{ margin: '0 30px', flex: 1, alignItems: 'stretch', display: 'flex', gap: '24px' }}>
         
-        {/* Navigation Sidebar (Far Left) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '220px' }}>
-          <button onClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>1. 主副帳號授權管理</button>
-          <button onClick={() => document.getElementById('config-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>2. 具名範圍欄位對應與解析</button>
-          <button onClick={() => document.getElementById('preview-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>3. Excel 樣板表格預覽</button>
-          <button onClick={() => alert('此功能即將推出')} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>4. 模擬填寫端 App UI 渲染</button>
+        <div style={{ display: 'flex', gap: '16px', minWidth: '400px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+            <button onClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>1. 主副帳號授權管理</button>
+            <button onClick={() => document.getElementById('config-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>2. 具名範圍欄位對應與解析</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+            <button onClick={() => document.getElementById('preview-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>3. Excel 樣板表格預覽</button>
+            <button onClick={() => alert('此功能即將推出')} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>4. 模擬填寫端 App UI 渲染</button>
+          </div>
         </div>
 
 
 
         {/* Cloud Templates Library (Right) */}
-        <section style={{ flex: 1, padding: '12px 20px', background: '#0f172a', borderRadius: '12px', border: '1px solid #1e293b', minWidth: 0 }}>
+        <section style={{ marginLeft: 'auto', padding: '12px 20px', background: '#0f172a', borderRadius: '12px', border: '1px solid #1e293b', minWidth: '400px', maxWidth: '600px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
           <span style={{ fontSize: '14px' }}>☁️</span>
           <h2 style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>雲端範本庫 (已發布的表單)</h2>
