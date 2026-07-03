@@ -11,6 +11,7 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates }) => {
   const [clientFolder, setClientFolder] = useState<string | null>(null);
   const [clientTemplate, setClientTemplate] = useState<any | null>(null);
   const [clientFormData, setClientFormData] = useState<Record<string, string>>({});
+  const [clientFileData, setClientFileData] = useState<Record<string, File>>({});
   const [isExporting, setIsExporting] = useState(false);
 
   if (!clientFolder && !clientTemplate) {
@@ -47,6 +48,7 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates }) => {
             <div key={t.id} onClick={() => {
               setClientTemplate(t);
               setClientFormData({});
+              setClientFileData({});
             }} style={{ background: 'rgba(255,255,255,0.05)', padding: '16px 20px', borderRadius: '12px', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ color: '#fff', fontSize: '16px', fontWeight: 500 }}>{t.title}</div>
               <div style={{ color: '#10b981', fontSize: '14px' }}>開始填寫 →</div>
@@ -107,9 +109,24 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates }) => {
             )}
             
             {(field.type === 'image' || field.type === 'signature') && (
-              <div style={{ padding: '24px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.2)', textAlign: 'center', color: '#a1a1aa' }}>
-                <div style={{ fontSize: '24px', marginBottom: '8px' }}>{field.type === 'image' ? '📷' : '✍️'}</div>
-                <div style={{ fontSize: '14px' }}>上傳檔案與簽名功能即將推出</div>
+              <div style={{ padding: '16px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.3)', textAlign: 'center', background: 'rgba(255,255,255,0.05)' }}>
+                <label style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '24px' }}>{field.type === 'image' ? '📷' : '✍️'}</span>
+                  <span style={{ fontSize: '14px', color: '#10b981', fontWeight: 'bold' }}>點擊上傳圖片</span>
+                  {clientFileData[field.name] && (
+                    <span style={{ fontSize: '12px', color: '#a1a1aa', marginTop: '4px' }}>已選擇: {clientFileData[field.name].name}</span>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setClientFileData({...clientFileData, [field.name]: e.target.files[0]});
+                      }
+                    }}
+                  />
+                </label>
               </div>
             )}
           </div>
@@ -121,11 +138,19 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates }) => {
           onClick={async () => {
             setIsExporting(true);
             try {
+              const formData = new FormData();
+              formData.append('data', JSON.stringify(clientFormData));
+              
+              Object.keys(clientFileData).forEach((key) => {
+                formData.append(key, clientFileData[key]);
+              });
+
               const res = await fetch(`${API_BASE}/api/templates/${clientTemplate.id}/export`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': MASTER_TOKEN },
-                body: JSON.stringify(clientFormData)
+                headers: { 'Authorization': MASTER_TOKEN },
+                body: formData
               });
+              
               if (!res.ok) {
                 const err = await res.json();
                 alert('匯出失敗: ' + (err.error || '未知錯誤'));
@@ -135,7 +160,7 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates }) => {
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = `${clientTemplate.title}_${new Date().getTime()}.pdf`;
+              a.download = `${clientTemplate.title}_${new Date().getTime()}.xlsx`;
               a.click();
               alert('✅ 表單已成功送出並下載！');
               setClientTemplate(null);
@@ -149,7 +174,7 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates }) => {
           disabled={isExporting}
           style={{ flex: 1, padding: '14px', borderRadius: '12px', background: isExporting ? '#6b7280' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', fontSize: '16px', fontWeight: 'bold', cursor: isExporting ? 'not-allowed' : 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
         >
-          {isExporting ? '🔄 處理中...' : '送出並下載 PDF'}
+          {isExporting ? '🔄 處理中...' : '送出並下載'}
         </button>
       </div>
     </div>
