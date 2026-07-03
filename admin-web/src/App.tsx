@@ -445,8 +445,22 @@ const Dashboard: React.FC = () => {
         </select>
       </header>
 
-      {/* Cloud Templates Library Section */}
-      <section style={{ margin: '16px 30px 0', padding: '12px 20px', background: '#0f172a', borderRadius: '12px', border: '1px solid #1e293b' }}>
+      {/* Top Header Controls */}
+      <div style={{ margin: '16px 30px 0', display: 'flex', gap: '24px' }}>
+        {/* Upload Button (Left) */}
+        {/* Upload template button */}
+        <div className="glass-panel" style={{ padding: '24px', minWidth: '250px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '16px' }}>
+          <label className="btn-primary" style={{ padding: '8px 16px', cursor: 'pointer', background: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            📁 選擇 Excel 樣板 (.xlsx)
+            <input type="file" accept=".xlsx" onChange={handleFileUpload} style={{ display: 'none' }} />
+          </label>
+          <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+            {selectedFile ? `已選取: ${selectedFile.name}` : '尚未選擇檔案'}
+          </span>
+        </div>
+
+        {/* Cloud Templates Library (Right) */}
+        <section style={{ flex: 1, padding: '12px 20px', background: '#0f172a', borderRadius: '12px', border: '1px solid #1e293b', minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
           <span style={{ fontSize: '14px' }}>☁️</span>
           <h2 style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>雲端範本庫 (已發布的表單)</h2>
@@ -491,7 +505,8 @@ const Dashboard: React.FC = () => {
             ))}
           </div>
         )}
-      </section>
+        </section>
+      </div>
 
       {/* Main dashboard content */}
       <main style={{ flex: 1, padding: '24px 30px', display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: '24px', boxSizing: 'border-box' }}>
@@ -597,16 +612,6 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Upload template button */}
-          <div className="glass-panel" style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <label className="btn-primary" style={{ padding: '8px 16px', cursor: 'pointer', background: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-              📁 選擇 Excel 樣板 (.xlsx)
-              <input type="file" accept=".xlsx" onChange={handleFileUpload} style={{ display: 'none' }} />
-            </label>
-            <span style={{ fontSize: '13px', color: '#94a3b8' }}>
-              {selectedFile ? `已選取: ${selectedFile.name}` : '尚未選擇檔案'}
-            </span>
-          </div>
 
           {/* Configuration Grid */}
           <div className="glass-panel" style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
