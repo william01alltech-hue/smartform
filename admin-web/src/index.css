@@ -7,7 +7,7 @@
 
   color-scheme: dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #0b0f19;
+  background-color: #000000;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -28,7 +28,7 @@ body {
 
 /* Glassmorphism Panel styles */
 .glass-panel {
-  background: rgba(30, 41, 59, 0.45);
+  background: rgba(24, 24, 27, 0.45);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -38,8 +38,8 @@ body {
 }
 
 .glass-panel:hover {
-  border-color: rgba(99, 102, 241, 0.25);
-  box-shadow: 0 8px 32px 0 rgba(99, 102, 241, 0.05);
+  border-color: rgba(139, 92, 246, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(139, 92, 246, 0.05);
 }
 
 /* Scrollbar customization */
@@ -75,13 +75,13 @@ body {
   font-weight: 600;
   border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 14px 0 rgba(139, 92, 246, 0.4);
   transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px 0 rgba(99, 102, 241, 0.6);
+  box-shadow: 0 6px 20px 0 rgba(139, 92, 246, 0.6);
 }
 
 .btn-primary:active {

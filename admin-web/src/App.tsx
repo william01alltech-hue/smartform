@@ -420,17 +420,17 @@ const Dashboard: React.FC = () => {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#0b0f19', color: '#e2e8f0' }}>
       {/* Header bar */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 40px', background: '#0f172a', borderBottom: '1px solid #1e293b' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 40px', background: '#09090b', borderBottom: '1px solid #18181b' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#6366f1', boxShadow: '0 0 12px #6366f1' }} />
+            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#8b5cf6', boxShadow: '0 0 12px #8b5cf6' }} />
             <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '0.5px' }}>{t('adminTitle')}</h1>
           </div>
           {/* Language Switcher dropdown */}
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value as Language)}
-            style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff', cursor: 'pointer', outline: 'none', width: 'fit-content', fontSize: '13px' }}
+            style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: '#18181b', border: '1px solid #27272a', color: '#fff', cursor: 'pointer', outline: 'none', width: 'fit-content', fontSize: '13px' }}
           >
             <option value="zh-TW">繁體中文 (zh-TW)</option>
             <option value="en-US">English (en-US)</option>
@@ -454,7 +454,7 @@ const Dashboard: React.FC = () => {
               <input type="file" accept=".xlsx" onChange={handleFileUpload} style={{ display: 'none' }} />
             </label>
             {selectedFile && (
-              <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+              <span style={{ fontSize: '12px', color: '#a1a1aa' }}>
                 已選取: {selectedFile.name}
               </span>
             )}
@@ -465,42 +465,42 @@ const Dashboard: React.FC = () => {
         
         <div style={{ display: 'flex', gap: '16px', minWidth: '400px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-            <button onClick={() => setShowAuth(!showAuth)} style={{ padding: '12px 16px', background: showAuth ? '#1e293b' : 'transparent', border: showAuth ? '1px solid #6366f1' : '1px dashed #334155', borderRadius: '8px', color: showAuth ? '#cbd5e1' : '#64748b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>1. 主副帳號授權管理</button>
-            <button onClick={() => setShowConfig(!showConfig)} style={{ padding: '12px 16px', background: showConfig ? '#1e293b' : 'transparent', border: showConfig ? '1px solid #6366f1' : '1px dashed #334155', borderRadius: '8px', color: showConfig ? '#cbd5e1' : '#64748b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>2. 具名範圍欄位對應與解析</button>
+            <button onClick={() => setShowAuth(!showAuth)} style={{ padding: '12px 16px', background: showAuth ? '#18181b' : 'transparent', border: showAuth ? '1px solid #8b5cf6' : '1px dashed #27272a', borderRadius: '8px', color: showAuth ? '#e4e4e7' : '#71717a', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>1. 主副帳號授權管理</button>
+            <button onClick={() => setShowConfig(!showConfig)} style={{ padding: '12px 16px', background: showConfig ? '#18181b' : 'transparent', border: showConfig ? '1px solid #8b5cf6' : '1px dashed #27272a', borderRadius: '8px', color: showConfig ? '#e4e4e7' : '#71717a', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>2. 具名範圍欄位對應與解析</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-            <button onClick={() => setShowPreview(!showPreview)} style={{ padding: '12px 16px', background: showPreview ? '#1e293b' : 'transparent', border: showPreview ? '1px solid #6366f1' : '1px dashed #334155', borderRadius: '8px', color: showPreview ? '#cbd5e1' : '#64748b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>3. Excel 樣板表格預覽</button>
-            <button onClick={() => setShowAppUI(!showAppUI)} style={{ padding: '12px 16px', background: showAppUI ? '#1e293b' : 'transparent', border: showAppUI ? '1px solid #6366f1' : '1px dashed #334155', borderRadius: '8px', color: showAppUI ? '#cbd5e1' : '#64748b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>4. 模擬填寫端 App UI 渲染</button>
+            <button onClick={() => setShowPreview(!showPreview)} style={{ padding: '12px 16px', background: showPreview ? '#18181b' : 'transparent', border: showPreview ? '1px solid #8b5cf6' : '1px dashed #27272a', borderRadius: '8px', color: showPreview ? '#e4e4e7' : '#71717a', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>3. Excel 樣板表格預覽</button>
+            <button onClick={() => setShowAppUI(!showAppUI)} style={{ padding: '12px 16px', background: showAppUI ? '#18181b' : 'transparent', border: showAppUI ? '1px solid #8b5cf6' : '1px dashed #27272a', borderRadius: '8px', color: showAppUI ? '#e4e4e7' : '#71717a', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>4. 模擬填寫端 App UI 渲染</button>
           </div>
         </div>
 
 
 
         {/* Cloud Templates Library (Right) */}
-        <section style={{ marginLeft: 'auto', padding: '12px 20px', background: '#0f172a', borderRadius: '12px', border: '1px solid #1e293b', minWidth: '400px', maxWidth: '600px', display: 'flex', flexDirection: 'column' }}>
+        <section style={{ marginLeft: 'auto', padding: '12px 20px', background: '#09090b', borderRadius: '12px', border: '1px solid #18181b', minWidth: '400px', maxWidth: '600px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
           <span style={{ fontSize: '14px' }}>☁️</span>
-          <h2 style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>雲端範本庫 (已發布的表單)</h2>
+          <h2 style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: '#fafafa' }}>雲端範本庫 (已發布的表單)</h2>
         </div>
         
         {cloudTemplates.length === 0 ? (
-          <div style={{ padding: '10px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+          <div style={{ padding: '10px', textAlign: 'center', color: '#71717a', fontSize: '13px' }}>
             目前沒有已發布的範本。請在下方上傳並發布。
           </div>
         ) : (
           <div className="custom-scrollbar" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
             {cloudTemplates.map((tpl) => (
-              <div key={tpl.id} style={{ minWidth: '220px', display: 'flex', flexDirection: 'column', padding: '12px', background: '#1e293b', borderRadius: '8px', border: '1px solid #334155', gap: '10px' }}>
+              <div key={tpl.id} style={{ minWidth: '220px', display: 'flex', flexDirection: 'column', padding: '12px', background: '#18181b', borderRadius: '8px', border: '1px solid #27272a', gap: '10px' }}>
                 <div style={{ overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                    <span style={{ padding: '2px 6px', background: '#334155', color: '#cbd5e1', fontSize: '11px', borderRadius: '4px' }}>
+                    <span style={{ padding: '2px 6px', background: '#27272a', color: '#e4e4e7', fontSize: '11px', borderRadius: '4px' }}>
                       📁 {tpl.folder || '未分類'}
                     </span>
                   </div>
                   <div style={{ fontWeight: 600, fontSize: '14px', color: '#f8fafc', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                     {tpl.title}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                  <div style={{ fontSize: '11px', color: '#a1a1aa', marginTop: '4px' }}>
                     更新: {new Date(tpl.updatedAt).toLocaleString()}
                   </div>
                 </div>
@@ -540,24 +540,24 @@ const Dashboard: React.FC = () => {
           <div id="auth-section" className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '18px' }}>🔑</span>
-              <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>主副帳號授權管理</h2>
+              <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#fafafa' }}>主副帳號授權管理</h2>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '12px', color: '#94a3b8' }}>管理端主帳號金鑰 (ADMIN_TOKEN)</label>
+              <label style={{ fontSize: '12px', color: '#a1a1aa' }}>管理端主帳號金鑰 (ADMIN_TOKEN)</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   type="text"
                   readOnly
                   value={MASTER_TOKEN}
-                  style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', backgroundColor: '#0f172a', border: '1px solid #334155', color: '#94a3b8', fontSize: '12px' }}
+                  style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', backgroundColor: '#09090b', border: '1px solid #27272a', color: '#a1a1aa', fontSize: '12px' }}
                 />
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(MASTER_TOKEN);
                     alert('已複製主帳號金鑰！可貼於手機 App 綁定。');
                   }}
-                  style={{ padding: '6px 12px', borderRadius: '6px', backgroundColor: '#334155', border: 'none', color: '#fff', fontSize: '12px', cursor: 'pointer' }}
+                  style={{ padding: '6px 12px', borderRadius: '6px', backgroundColor: '#27272a', border: 'none', color: '#fff', fontSize: '12px', cursor: 'pointer' }}
                 >
                   複製
                 </button>
@@ -566,10 +566,10 @@ const Dashboard: React.FC = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={{ fontSize: '12px', color: '#94a3b8' }}>產生的副帳號金鑰 (MEMBER_TOKEN)</label>
+                <label style={{ fontSize: '12px', color: '#a1a1aa' }}>產生的副帳號金鑰 (MEMBER_TOKEN)</label>
                 <button
                   onClick={generateMemberToken}
-                  style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#6366f1', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
+                  style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#8b5cf6', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
                 >
                   + 生成成員金鑰
                 </button>
@@ -580,20 +580,20 @@ const Dashboard: React.FC = () => {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
                   {memberTokens.map((t, idx) => (
-                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#0f172a', padding: '8px', borderRadius: '8px', border: '1px solid #1e293b' }}>
+                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#09090b', padding: '8px', borderRadius: '8px', border: '1px solid #18181b' }}>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <input
                           type="text"
                           readOnly
                           value={t.token}
-                          style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', backgroundColor: '#000', border: 'none', color: '#10b981', fontSize: '11px' }}
+                          style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', backgroundColor: '#000', border: 'none', color: '#14b8a6', fontSize: '11px' }}
                         />
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(t.token);
                             alert(`成員金鑰 ${t.token} 已複製！`);
                           }}
-                          style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#334155', border: 'none', color: '#fff', fontSize: '11px', cursor: 'pointer' }}
+                          style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#27272a', border: 'none', color: '#fff', fontSize: '11px', cursor: 'pointer' }}
                         >
                           複製
                         </button>
@@ -617,10 +617,10 @@ const Dashboard: React.FC = () => {
                           刪除
                         </button>
                       </div>
-                      <div style={{ fontSize: '10px', color: '#64748b', paddingLeft: '4px' }}>
+                      <div style={{ fontSize: '10px', color: '#71717a', paddingLeft: '4px' }}>
                         授權專案：
                         {t.allowedFolders === undefined ? (
-                          <span style={{ color: '#10b981' }}>全部允許 (全選)</span>
+                          <span style={{ color: '#14b8a6' }}>全部允許 (全選)</span>
                         ) : t.allowedFolders.length === 0 ? (
                           <span style={{ color: '#ef4444' }}>無權限 (全部未勾選)</span>
                         ) : (
@@ -640,9 +640,9 @@ const Dashboard: React.FC = () => {
           {showConfig && (
           <div id="config-section" className="glass-panel" style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>具名範圍欄位對應與解析</h2>
+              <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#fafafa' }}>具名範圍欄位對應與解析</h2>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn-primary" style={{ background: '#10b981', boxShadow: '0 4px 14px 0 rgba(16, 185, 129, 0.4)', padding: '6px 12px', fontSize: '12px' }} onClick={addNewField}>
+                <button className="btn-primary" style={{ background: '#14b8a6', boxShadow: '0 4px 14px 0 rgba(16, 185, 129, 0.4)', padding: '6px 12px', fontSize: '12px' }} onClick={addNewField}>
                   + 欄位
                 </button>
                 {fields.length > 0 && (
@@ -665,38 +665,38 @@ const Dashboard: React.FC = () => {
 
             <div style={{ display: 'flex', gap: '16px', marginBottom: '8px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                <label style={{ fontSize: '13px', color: '#94a3b8', fontWeight: 500 }}>表單標題 (Form Title):</label>
+                <label style={{ fontSize: '13px', color: '#a1a1aa', fontWeight: 500 }}>表單標題 (Form Title):</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#0f172a', border: '1px solid #1e293b', color: '#fff', outline: 'none' }}
+                  style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#09090b', border: '1px solid #18181b', color: '#fff', outline: 'none' }}
                 />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                <label style={{ fontSize: '13px', color: '#94a3b8', fontWeight: 500 }}>資料夾名稱 (Folder):</label>
+                <label style={{ fontSize: '13px', color: '#a1a1aa', fontWeight: 500 }}>資料夾名稱 (Folder):</label>
                 <input
                   type="text"
                   value={folder}
                   onChange={(e) => setFolder(e.target.value)}
                   placeholder="未分類"
-                  style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#0f172a', border: '1px solid #1e293b', color: '#fff', outline: 'none' }}
+                  style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#09090b', border: '1px solid #18181b', color: '#fff', outline: 'none' }}
                 />
               </div>
             </div>
 
             {loading ? (
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
-                <p style={{ color: '#6366f1', fontWeight: 500 }}>{t('loading')}</p>
+                <p style={{ color: '#8b5cf6', fontWeight: 500 }}>{t('loading')}</p>
               </div>
             ) : fields.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flex: 1, color: '#94a3b8', textAlign: 'center', gap: '12px', padding: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flex: 1, color: '#a1a1aa', textAlign: 'center', gap: '12px', padding: '20px' }}>
                 <p style={{ margin: 0, fontWeight: 500 }}>
                   {hasUploaded 
                     ? '⚠️ 檔案上傳成功，但在此 Excel 中找不到任何「具名範圍 (Named Ranges)」。' 
                     : t('emptyConfig')}
                 </p>
-                <p style={{ margin: 0, fontSize: '12px', color: '#64748b', maxWidth: '350px' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#71717a', maxWidth: '350px' }}>
                   請點擊左側 Excel 預覽畫面中的格子來直接新增對應欄位。
                 </p>
               </div>
@@ -704,7 +704,7 @@ const Dashboard: React.FC = () => {
               <div className="custom-scrollbar" style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #1e293b', color: '#94a3b8', textAlign: 'left' }}>
+                    <tr style={{ borderBottom: '1px solid #18181b', color: '#a1a1aa', textAlign: 'left' }}>
                       <th style={{ padding: '12px 8px' }}>
                         <div>欄位代號 (ID)</div>
                       </th>
@@ -755,7 +755,7 @@ const Dashboard: React.FC = () => {
                             setDraggedIdx(null);
                           }}
                           style={{ 
-                            borderBottom: '1px solid #1e293b',
+                            borderBottom: '1px solid #18181b',
                             backgroundColor: isHighlighted ? 'rgba(99, 102, 241, 0.12)' : (isPickingThis ? 'rgba(16, 185, 129, 0.15)' : 'transparent'),
                             transition: 'background-color 0.4s ease',
                             cursor: draggedIdx !== null ? 'grabbing' : 'grab'
@@ -767,7 +767,7 @@ const Dashboard: React.FC = () => {
                               value={(idx + 1).toString()}
                               disabled
                               title="欄位代號自動依照順序產生，作為系統識別用途"
-                              style={{ padding: '6px 8px', width: '60px', textAlign: 'center', borderRadius: '6px', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#94a3b8', cursor: 'not-allowed' }}
+                              style={{ padding: '6px 8px', width: '60px', textAlign: 'center', borderRadius: '6px', backgroundColor: '#18181b', border: '1px solid #27272a', color: '#a1a1aa', cursor: 'not-allowed' }}
                             />
                           </td>
                           <td style={{ padding: '8px 4px' }}>
@@ -776,7 +776,7 @@ const Dashboard: React.FC = () => {
                                 value={parseRangeForUI(field.rangeStr).sheet}
                                 disabled
                                 title="Excel 位置無法手動更改，請刪除此欄位後重新在左方圖表點選"
-                                style={{ padding: '6px 4px', width: '70px', borderRadius: '6px', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#94a3b8', fontSize: '11px', cursor: 'not-allowed' }}
+                                style={{ padding: '6px 4px', width: '70px', borderRadius: '6px', backgroundColor: '#18181b', border: '1px solid #27272a', color: '#a1a1aa', fontSize: '11px', cursor: 'not-allowed' }}
                               >
                                 {visualSheets.map((s, i) => (
                                   <option key={i} value={s.name}>{s.name}</option>
@@ -790,7 +790,7 @@ const Dashboard: React.FC = () => {
                                 value={parseRangeForUI(field.rangeStr).cell}
                                 disabled
                                 title="Excel 位置無法手動更改，請刪除此欄位後重新在左方圖表點選"
-                                style={{ padding: '6px 4px', width: '45px', borderRadius: '6px', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#94a3b8', fontSize: '12px', cursor: 'not-allowed', textAlign: 'center' }}
+                                style={{ padding: '6px 4px', width: '45px', borderRadius: '6px', backgroundColor: '#18181b', border: '1px solid #27272a', color: '#a1a1aa', fontSize: '12px', cursor: 'not-allowed', textAlign: 'center' }}
                               />
                             </div>
                           </td>
@@ -800,7 +800,7 @@ const Dashboard: React.FC = () => {
                                 type="text"
                                 value={field.label}
                                 onChange={(e) => updateField(idx, 'label', e.target.value)}
-                                style={{ padding: '6px 8px', width: '90px', borderRadius: '6px', backgroundColor: '#0f172a', border: '1px solid #1e293b', color: '#fff' }}
+                                style={{ padding: '6px 8px', width: '90px', borderRadius: '6px', backgroundColor: '#09090b', border: '1px solid #18181b', color: '#fff' }}
                               />
                               <button
                                 onClick={() => setPickingLabelIdx(isPickingThis ? null : idx)}
@@ -809,7 +809,7 @@ const Dashboard: React.FC = () => {
                                   padding: '4px', 
                                   borderRadius: '6px', 
                                   border: 'none', 
-                                  backgroundColor: isPickingThis ? '#10b981' : '#334155', 
+                                  backgroundColor: isPickingThis ? '#14b8a6' : '#27272a', 
                                   color: '#fff', 
                                   cursor: 'pointer',
                                   fontSize: '12px'
@@ -823,7 +823,7 @@ const Dashboard: React.FC = () => {
                             <select
                               value={field.type}
                               onChange={(e) => updateField(idx, 'type', e.target.value)}
-                              style={{ padding: '6px 4px', width: '90px', borderRadius: '6px', backgroundColor: '#0f172a', border: '1px solid #1e293b', color: '#fff', fontSize: '12px' }}
+                              style={{ padding: '6px 4px', width: '90px', borderRadius: '6px', backgroundColor: '#09090b', border: '1px solid #18181b', color: '#fff', fontSize: '12px' }}
                             >
                               <option value="text">純文字</option>
                               <option value="image">相片</option>
@@ -840,7 +840,7 @@ const Dashboard: React.FC = () => {
                               value={field.imageSizeMode || 'fill'}
                               onChange={(e) => updateField(idx, 'imageSizeMode', e.target.value)}
                               disabled={field.type !== 'image'}
-                              style={{ padding: '6px 4px', width: '85px', borderRadius: '6px', backgroundColor: '#0f172a', border: '1px solid #1e293b', color: '#fff', fontSize: '12px', opacity: (field.type !== 'image') ? 0.5 : 1 }}
+                              style={{ padding: '6px 4px', width: '85px', borderRadius: '6px', backgroundColor: '#09090b', border: '1px solid #18181b', color: '#fff', fontSize: '12px', opacity: (field.type !== 'image') ? 0.5 : 1 }}
                               title="填滿：忽略長寬比完全填滿；邊框10：相片四周距離儲存格10pt；原比例：相片保持比例置中"
                             >
                               <option value="fill">填滿</option>
@@ -853,7 +853,7 @@ const Dashboard: React.FC = () => {
                               value={field.resolutionTag}
                               onChange={(e) => updateField(idx, 'resolutionTag', e.target.value)}
                               disabled={field.type !== 'image' && field.type !== 'signature'}
-                              style={{ padding: '6px 4px', width: '115px', borderRadius: '6px', backgroundColor: '#0f172a', border: '1px solid #1e293b', color: '#fff', fontSize: '12px', opacity: (field.type !== 'image' && field.type !== 'signature') ? 0.5 : 1 }}
+                              style={{ padding: '6px 4px', width: '115px', borderRadius: '6px', backgroundColor: '#09090b', border: '1px solid #18181b', color: '#fff', fontSize: '12px', opacity: (field.type !== 'image' && field.type !== 'signature') ? 0.5 : 1 }}
                             >
                               <option value="small">小 (&lt;800px)</option>
                               <option value="medium">中 (800~1280px)</option>
@@ -871,7 +871,7 @@ const Dashboard: React.FC = () => {
                             <select
                               value={field.stylePreset || 'default'}
                               onChange={(e) => updateField(idx, 'stylePreset', e.target.value)}
-                              style={{ padding: '6px 4px', width: '100px', borderRadius: '6px', backgroundColor: '#0f172a', border: '1px solid #1e293b', color: '#fff', fontSize: '12px' }}
+                              style={{ padding: '6px 4px', width: '100px', borderRadius: '6px', backgroundColor: '#09090b', border: '1px solid #18181b', color: '#fff', fontSize: '12px' }}
                             >
                               {STYLE_PRESETS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
@@ -901,13 +901,13 @@ const Dashboard: React.FC = () => {
         <div id="preview-section" className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', minHeight: '580px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <span style={{ fontSize: '18px' }}>📊</span>
-            <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>Excel 樣板表格預覽</h2>
+            <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#fafafa' }}>Excel 樣板表格預覽</h2>
           </div>
           
           {visualSheets.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', color: '#94a3b8' }}>💡 點擊下方表格格子即可直接設定對應</span>
+                <span style={{ fontSize: '12px', color: '#a1a1aa' }}>💡 點擊下方表格格子即可直接設定對應</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {visualSheets.map((sheet, index) => (
                     <button
@@ -916,7 +916,7 @@ const Dashboard: React.FC = () => {
                       style={{
                         padding: '6px 12px',
                         borderRadius: '6px',
-                        backgroundColor: activeSheetIndex === index ? '#6366f1' : '#1e293b',
+                        backgroundColor: activeSheetIndex === index ? '#8b5cf6' : '#18181b',
                         border: 'none',
                         color: '#fff',
                         cursor: 'pointer',
@@ -930,8 +930,8 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="custom-scrollbar" style={{ overflowX: 'scroll', height: `${previewHeight}px`, overflowY: 'auto', border: '1px solid #cbd5e1', borderRadius: '12px', background: '#ffffff' }}>
-                <table style={{ borderCollapse: 'collapse', fontSize: '12px', color: '#1e293b', tableLayout: 'fixed', width: 'max-content', minWidth: '100%', zoom: zoomLevel } as React.CSSProperties}>
+              <div className="custom-scrollbar" style={{ overflowX: 'scroll', height: `${previewHeight}px`, overflowY: 'auto', border: '1px solid #e4e4e7', borderRadius: '12px', background: '#ffffff' }}>
+                <table style={{ borderCollapse: 'collapse', fontSize: '12px', color: '#18181b', tableLayout: 'fixed', width: 'max-content', minWidth: '100%', zoom: zoomLevel } as React.CSSProperties}>
                   <colgroup>
                     <col style={{ width: '45px' }} />
                     {(visualSheets[activeSheetIndex].columnWidths || []).map((w, idx) => (
@@ -940,9 +940,9 @@ const Dashboard: React.FC = () => {
                   </colgroup>
                   <thead>
                     <tr style={{ backgroundColor: '#f8fafc' }}>
-                      <th style={{ width: '45px', border: '1px solid #cbd5e1', padding: '6px', textAlign: 'center', color: '#64748b', fontWeight: 'bold' }}></th>
+                      <th style={{ width: '45px', border: '1px solid #e4e4e7', padding: '6px', textAlign: 'center', color: '#71717a', fontWeight: 'bold' }}></th>
                       {(visualSheets[activeSheetIndex].columnWidths || []).map((_, cIdx) => (
-                        <th key={cIdx} style={{ border: '1px solid #cbd5e1', padding: '6px', textAlign: 'center', color: '#64748b', fontWeight: 'bold' }}>
+                        <th key={cIdx} style={{ border: '1px solid #e4e4e7', padding: '6px', textAlign: 'center', color: '#71717a', fontWeight: 'bold' }}>
                           {String.fromCharCode(65 + cIdx)}
                         </th>
                       ))}
@@ -955,10 +955,10 @@ const Dashboard: React.FC = () => {
                         <tr key={rIdx} style={{ height: `${rowHeight}px` }}>
                           <td style={{
                             backgroundColor: '#f8fafc',
-                            border: '1px solid #cbd5e1',
+                            border: '1px solid #e4e4e7',
                             padding: '4px',
                             textAlign: 'center',
-                            color: '#64748b',
+                            color: '#71717a',
                             fontWeight: 'normal',
                             height: `${rowHeight}px`,
                             userSelect: 'none'
@@ -1000,7 +1000,7 @@ const Dashboard: React.FC = () => {
                                     : (cell.style?.backgroundColor || (isMapped 
                                     ? (existingField.type === 'image' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(99, 102, 241, 0.18)')
                                     : 'transparent')),
-                                  color: cell.style?.color || '#1e293b',
+                                  color: cell.style?.color || '#18181b',
                                   fontWeight: (cell.style?.fontWeight as React.CSSProperties['fontWeight']) || 'normal',
                                   fontStyle: (cell.style?.fontStyle as React.CSSProperties['fontStyle']) || 'normal',
                                   fontSize: cell.style?.fontSize || '10pt',
@@ -1009,17 +1009,17 @@ const Dashboard: React.FC = () => {
                                   
                                   // Border settings: use custom borders, fallback to default grid lines, override if mapped
                                   borderTop: isMapped
-                                    ? `3px solid ${existingField.type === 'image' ? '#10b981' : '#6366f1'}`
-                                    : (cell.style?.borderTop || '1px solid #cbd5e1'),
+                                    ? `3px solid ${existingField.type === 'image' ? '#14b8a6' : '#8b5cf6'}`
+                                    : (cell.style?.borderTop || '1px solid #e4e4e7'),
                                   borderLeft: isMapped
-                                    ? `3px solid ${existingField.type === 'image' ? '#10b981' : '#6366f1'}`
-                                    : (cell.style?.borderLeft || '1px solid #cbd5e1'),
+                                    ? `3px solid ${existingField.type === 'image' ? '#14b8a6' : '#8b5cf6'}`
+                                    : (cell.style?.borderLeft || '1px solid #e4e4e7'),
                                   borderBottom: isMapped
-                                    ? `3px solid ${existingField.type === 'image' ? '#10b981' : '#6366f1'}`
-                                    : (cell.style?.borderBottom || '1px solid #cbd5e1'),
+                                    ? `3px solid ${existingField.type === 'image' ? '#14b8a6' : '#8b5cf6'}`
+                                    : (cell.style?.borderBottom || '1px solid #e4e4e7'),
                                   borderRight: isMapped
-                                    ? `3px solid ${existingField.type === 'image' ? '#10b981' : '#6366f1'}`
-                                    : (cell.style?.borderRight || '1px solid #cbd5e1'),
+                                    ? `3px solid ${existingField.type === 'image' ? '#14b8a6' : '#8b5cf6'}`
+                                    : (cell.style?.borderRight || '1px solid #e4e4e7'),
                                 }}
                                 title={cell.address}
                                 onMouseEnter={(e) => {
@@ -1040,7 +1040,7 @@ const Dashboard: React.FC = () => {
                                 }}>
                                   {isMapped ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
-                                      <span style={{ fontWeight: 'bold', fontSize: '9px', color: existingField.type === 'image' ? '#10b981' : (existingField.type === 'signature' ? '#fbbf24' : '#818cf8'), letterSpacing: '0.2px' }}>
+                                      <span style={{ fontWeight: 'bold', fontSize: '9px', color: existingField.type === 'image' ? '#14b8a6' : (existingField.type === 'signature' ? '#fbbf24' : '#818cf8'), letterSpacing: '0.2px' }}>
                                         {existingField.type === 'image' && '📷 '}
                                         {existingField.type === 'signature' && '✍️ '}
                                         {existingField.type === 'text' && '✏️ '}
@@ -1051,7 +1051,7 @@ const Dashboard: React.FC = () => {
                                         {existingField.type === 'tel' && '☎️ '}
                                         {existingField.name}
                                       </span>
-                                      <span style={{ fontSize: '11px', color: cell.style?.color || '#1e293b' }}>{cell.value || existingField.label}</span>
+                                      <span style={{ fontSize: '11px', color: cell.style?.color || '#18181b' }}>{cell.value || existingField.label}</span>
                                     </div>
                                   ) : (
                                     cell.value || ''
@@ -1068,7 +1068,7 @@ const Dashboard: React.FC = () => {
               </div>
               
               <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '4px 8px 0', flexWrap: 'wrap' }}>
-                 <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>↕️ 預覽高度</span>
+                 <span style={{ fontSize: '12px', color: '#a1a1aa', fontWeight: 500 }}>↕️ 預覽高度</span>
                  <input 
                    type="range" 
                    min="300" 
@@ -1076,10 +1076,10 @@ const Dashboard: React.FC = () => {
                    step="50" 
                    value={previewHeight} 
                    onChange={(e) => setPreviewHeight(parseInt(e.target.value))} 
-                   style={{ width: '100px', accentColor: '#10b981', cursor: 'pointer' }} 
+                   style={{ width: '100px', accentColor: '#14b8a6', cursor: 'pointer' }} 
                    title={`目前高度: ${previewHeight}px`}
                  />
-                 <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500, marginLeft: '12px' }}>🔍 縮放比例 ({Math.round(zoomLevel * 100)}%)</span>
+                 <span style={{ fontSize: '12px', color: '#a1a1aa', fontWeight: 500, marginLeft: '12px' }}>🔍 縮放比例 ({Math.round(zoomLevel * 100)}%)</span>
                  <input 
                    type="range" 
                    min="0.3" 
@@ -1087,12 +1087,12 @@ const Dashboard: React.FC = () => {
                    step="0.05" 
                    value={zoomLevel} 
                    onChange={(e) => setZoomLevel(parseFloat(e.target.value))} 
-                   style={{ width: '150px', accentColor: '#6366f1', cursor: 'pointer' }} 
+                   style={{ width: '150px', accentColor: '#8b5cf6', cursor: 'pointer' }} 
                  />
               </div>
             </div>
           ) : (
-            <div style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#94a3b8', textAlign: 'center', gap: '16px' }}>
+            <div style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#a1a1aa', textAlign: 'center', gap: '16px' }}>
 
             </div>
           )}
@@ -1102,15 +1102,15 @@ const Dashboard: React.FC = () => {
         {/* Right column: Simulated mobile App form UI rendering preview */}
         {showAppUI && (
         <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>{t('previewApp')}</h2>
+          <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#fafafa' }}>{t('previewApp')}</h2>
 
           {/* Smartphone Frame Simulator */}
-          <div className="custom-scrollbar" style={{ width: '100%', flex: 1, backgroundColor: '#0f172a', borderRadius: '24px', border: '8px solid #1e293b', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: `${Math.max(previewHeight, 400)}px`, overflowY: 'auto' }}>
+          <div className="custom-scrollbar" style={{ width: '100%', flex: 1, backgroundColor: '#09090b', borderRadius: '24px', border: '8px solid #18181b', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: `${Math.max(previewHeight, 400)}px`, overflowY: 'auto' }}>
             
             {/* Simulated App Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #18181b', paddingBottom: '12px' }}>
               <span style={{ fontSize: '14px', fontWeight: 'bold' }}>{title}</span>
-              <span style={{ fontSize: '11px', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '8px' }}>
+              <span style={{ fontSize: '11px', color: '#14b8a6', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '8px' }}>
                 Online
               </span>
             </div>
@@ -1123,7 +1123,7 @@ const Dashboard: React.FC = () => {
             ) : (
               fields.map((field, idx) => (
                 <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#a1a1aa' }}>
                     {field.name.replace(/_/g, ' ')} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
                   </label>
                   
@@ -1132,7 +1132,7 @@ const Dashboard: React.FC = () => {
                       type="text"
                       disabled
                       placeholder={`請輸入 ${field.label || field.name}...`}
-                      style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#1e293b', border: 'none', color: '#64748b', fontSize: '12px' }}
+                      style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#18181b', border: 'none', color: '#71717a', fontSize: '12px' }}
                     />
                   )}
                   {field.type === 'number' && (
@@ -1140,7 +1140,7 @@ const Dashboard: React.FC = () => {
                       type="text"
                       disabled
                       placeholder={`請輸入數字 ${field.label || field.name}...`}
-                      style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#1e293b', border: 'none', color: '#64748b', fontSize: '12px' }}
+                      style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#18181b', border: 'none', color: '#71717a', fontSize: '12px' }}
                     />
                   )}
                   {field.type === 'mobile' && (
@@ -1148,7 +1148,7 @@ const Dashboard: React.FC = () => {
                       type="text"
                       disabled
                       placeholder="請輸入手機 (格式: xxxx-xxxxxx)"
-                      style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#1e293b', border: 'none', color: '#64748b', fontSize: '12px' }}
+                      style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#18181b', border: 'none', color: '#71717a', fontSize: '12px' }}
                     />
                   )}
                   {field.type === 'tel' && (
@@ -1156,11 +1156,11 @@ const Dashboard: React.FC = () => {
                       type="text"
                       disabled
                       placeholder="請輸入電話 (格式: (xx)xxxxxxxx)"
-                      style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#1e293b', border: 'none', color: '#64748b', fontSize: '12px' }}
+                      style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#18181b', border: 'none', color: '#71717a', fontSize: '12px' }}
                     />
                   )}
                   {field.type === 'date' && (
-                    <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#64748b', fontSize: '12px', cursor: 'not-allowed' }}>
+                    <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#18181b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#71717a', fontSize: '12px', cursor: 'not-allowed' }}>
                       <span>選擇日期...</span>
                       <span>📅</span>
                     </div>
@@ -1168,11 +1168,11 @@ const Dashboard: React.FC = () => {
                   {field.type === 'checkbox' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0' }}>
                       <input type="checkbox" disabled style={{ cursor: 'not-allowed' }} />
-                      <span style={{ fontSize: '12px', color: '#94a3b8' }}>勾選即代表確認</span>
+                      <span style={{ fontSize: '12px', color: '#a1a1aa' }}>勾選即代表確認</span>
                     </div>
                   )}
                   {field.type === 'image' && (
-                    <div style={{ height: '100px', borderRadius: '8px', border: '1px dashed #6366f1', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '4px', color: '#6366f1', background: 'rgba(99, 102, 241, 0.03)', cursor: 'not-allowed' }}>
+                    <div style={{ height: '100px', borderRadius: '8px', border: '1px dashed #8b5cf6', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '4px', color: '#8b5cf6', background: 'rgba(99, 102, 241, 0.03)', cursor: 'not-allowed' }}>
                       <span style={{ fontSize: '16px' }}>📷</span>
                       <span style={{ fontSize: '10px' }}>比例: {field.aspectRatio === 1.3333 ? '4:3' : field.aspectRatio === 1.7778 ? '16:9' : '1:1'} ({field.resolutionTag})</span>
                     </div>
@@ -1190,10 +1190,10 @@ const Dashboard: React.FC = () => {
             {/* Simulated Actions */}
             {fields.length > 0 && (
               <div style={{ marginTop: 'auto', display: 'flex', gap: '12px', paddingTop: '16px' }}>
-                <button style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #6366f1', backgroundColor: 'transparent', color: '#6366f1', fontSize: '12px', fontWeight: 'bold' }}>
+                <button style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #8b5cf6', backgroundColor: 'transparent', color: '#8b5cf6', fontSize: '12px', fontWeight: 'bold' }}>
                   Save Draft
                 </button>
-                <button style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: '#6366f1', color: '#fff', fontSize: '12px', fontWeight: 'bold' }}>
+                <button style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: '#8b5cf6', color: '#fff', fontSize: '12px', fontWeight: 'bold' }}>
                   Submit Form
                 </button>
               </div>
@@ -1212,14 +1212,14 @@ const Dashboard: React.FC = () => {
         }}>
           <div className="glass-panel" style={{ padding: '24px', width: '400px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h2 style={{ margin: 0, fontSize: '18px', color: '#fff' }}>設定專案權限</h2>
-            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
-              設定金鑰 <span style={{ color: '#10b981' }}>{editingToken}</span> 的可見資料夾。<br/>
+            <p style={{ margin: 0, fontSize: '12px', color: '#a1a1aa' }}>
+              設定金鑰 <span style={{ color: '#14b8a6' }}>{editingToken}</span> 的可見資料夾。<br/>
               <b>提醒：若要給予所有專案與未分類表單的權限，請點擊「全部權限」。</b>
             </p>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto', backgroundColor: '#0f172a', padding: '12px', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto', backgroundColor: '#09090b', padding: '12px', borderRadius: '8px' }}>
               {Array.from(new Set(cloudTemplates.map(t => t.folder).filter(f => f))).length === 0 ? (
-                <div style={{ color: '#64748b', fontSize: '12px', textAlign: 'center' }}>目前沒有任何具名專案資料夾。<br/>若要讓員工看見未分類表單，請使用「全部權限」。</div>
+                <div style={{ color: '#71717a', fontSize: '12px', textAlign: 'center' }}>目前沒有任何具名專案資料夾。<br/>若要讓員工看見未分類表單，請使用「全部權限」。</div>
               ) : (
                 Array.from(new Set(cloudTemplates.map(t => t.folder).filter(f => f))).map((f, idx) => (
                   <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0', fontSize: '14px', cursor: 'pointer' }}>
@@ -1232,7 +1232,7 @@ const Dashboard: React.FC = () => {
                         else newSet.delete(f);
                         setEditingFolders(newSet);
                       }}
-                      style={{ accentColor: '#6366f1', width: '16px', height: '16px' }}
+                      style={{ accentColor: '#8b5cf6', width: '16px', height: '16px' }}
                     />
                     📁 {f}
                   </label>
@@ -1247,13 +1247,13 @@ const Dashboard: React.FC = () => {
                     const all = Array.from(new Set(cloudTemplates.map(t => t.folder).filter(f => f)));
                     setEditingFolders(new Set(all));
                   }}
-                  style={{ padding: '6px 12px', borderRadius: '6px', background: '#334155', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px', marginRight: '8px' }}
+                  style={{ padding: '6px 12px', borderRadius: '6px', background: '#27272a', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px', marginRight: '8px' }}
                 >
                   全選
                 </button>
                 <button 
                   onClick={() => setEditingFolders(new Set())}
-                  style={{ padding: '6px 12px', borderRadius: '6px', background: '#334155', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px' }}
+                  style={{ padding: '6px 12px', borderRadius: '6px', background: '#27272a', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px' }}
                 >
                   全不選 (無權限)
                 </button>
@@ -1261,7 +1261,7 @@ const Dashboard: React.FC = () => {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button 
                   onClick={() => setEditingToken(null)}
-                  style={{ padding: '8px 16px', borderRadius: '6px', background: '#334155', color: '#fff', border: 'none', cursor: 'pointer' }}
+                  style={{ padding: '8px 16px', borderRadius: '6px', background: '#27272a', color: '#fff', border: 'none', cursor: 'pointer' }}
                 >
                   取消
                 </button>
@@ -1278,7 +1278,7 @@ const Dashboard: React.FC = () => {
                       setEditingToken(null);
                     } else alert('權限更新失敗');
                   }}
-                  style={{ padding: '8px 16px', borderRadius: '6px', background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer' }}
+                  style={{ padding: '8px 16px', borderRadius: '6px', background: '#8b5cf6', color: '#fff', border: 'none', cursor: 'pointer' }}
                 >
                   全部權限
                 </button>
