@@ -3,6 +3,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL;
 const MASTER_TOKEN = import.meta.env.VITE_MASTER_TOKEN || 'william_master_token';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import type { Language } from './context/LanguageContext';
+import { ClientMode } from './ClientMode';
 
 interface FieldConfig {
   name: string;
@@ -112,6 +113,7 @@ const Dashboard: React.FC = () => {
   const [showConfig, setShowConfig] = useState(true);
   const [showPreview, setShowPreview] = useState(true);
   const [showAppUI, setShowAppUI] = useState(true);
+  const [isClientMode, setIsClientMode] = useState(window.innerWidth <= 768);
   
   // UX enhancements
   const [pickingLabelIdx, setPickingLabelIdx] = useState<number | null>(null);
@@ -426,6 +428,9 @@ const Dashboard: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#8b5cf6', boxShadow: '0 0 12px #8b5cf6' }} />
             <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '0.5px' }}>{t('adminTitle')}</h1>
+            <button onClick={() => setIsClientMode(!isClientMode)} style={{ padding: '6px 12px', borderRadius: '8px', background: isClientMode ? '#10b981' : 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' }}>
+              {isClientMode ? '💻 切換至後台' : '📱 前台填寫模式'}
+            </button>
           </div>
           {/* Language Switcher dropdown */}
           <select
@@ -530,6 +535,9 @@ const Dashboard: React.FC = () => {
 
 
       {/* Main dashboard content */}
+      {isClientMode ? (
+        <ClientMode cloudTemplates={cloudTemplates} />
+      ) : (
       <main className="main-layout" style={{ gridTemplateColumns: [(showAuth || showConfig) ? 'minmax(0, 1.2fr)' : '', showPreview ? 'minmax(0, 1.5fr)' : '', showAppUI ? 'minmax(0, 0.8fr)' : ''].filter(Boolean).join(' ') }}>
         
         {/* Column 2 (Left): File Upload & Configuration parameters mapping grid */}
@@ -1237,6 +1245,7 @@ const Dashboard: React.FC = () => {
         </div>
         )}
       </main>
+      )}
 
       {/* Editing Permissions Modal */}
       {editingToken && (

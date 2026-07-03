@@ -1,0 +1,16 @@
+{
+  "services": {
+    "smartform-backend": {
+      "root": "."
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "smartform-backend"
+      }
+    }
+  ]
+}

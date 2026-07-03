@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_UeA4whTTrwlBzGOtO5HNGbmFM5cD",
+  "orgId": "team_5pwWjpcHXDMeu670g8nhBcWz",
+  "projectName": "admin-web",
+  "settings": {
+    "createdAt": 1783050984636,
+    "framework": "vite",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}
