@@ -422,31 +422,8 @@ const Dashboard: React.FC = () => {
           <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '0.5px' }}>{t('adminTitle')}</h1>
         </div>
 
-        {/* Language Switcher dropdown */}
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value as Language)}
-          style={{ padding: '8px 16px', borderRadius: '8px', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff', cursor: 'pointer', outline: 'none' }}
-        >
-          <option value="zh-TW">繁體中文 (zh-TW)</option>
-          <option value="en-US">English (en-US)</option>
-          <option value="zh-CN">简体中文 (zh-CN)</option>
-          <option value="vi-VN">Tiếng Việt (vi-VN)</option>
-          <option value="id-ID">Bahasa Indonesia (id-ID)</option>
-          <option value="th-TH">ไทย (th-TH)</option>
-          <option value="ja-JP">日本語 (ja-JP)</option>
-          <option value="ko-KR">한국어 (ko-KR)</option>
-          <option value="es-ES">Español (es-ES)</option>
-          <option value="fr-FR">Français (fr-FR)</option>
-          <option value="de-DE">Deutsch (de-DE)</option>
-          <option value="pt-BR">Português (pt-BR)</option>
-          <option value="ru-RU">Русский (ru-RU)</option>
-          <option value="ar-SA">العربية (ar-SA)</option>
-        </select>
-      </header>
-
       {/* Top Header Controls */}
-      <div style={{ margin: '16px 30px 0', display: 'flex', gap: '24px' }}>
+      <div style={{ margin: '0 30px', flex: 1, alignItems: 'stretch', display: 'flex', gap: '24px' }}>
         
         {/* Navigation Sidebar (Far Left) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '220px' }}>
@@ -516,6 +493,29 @@ const Dashboard: React.FC = () => {
         )}
         </section>
       </div>
+        {/* Language Switcher dropdown */}
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value as Language)}
+          style={{ padding: '8px 16px', borderRadius: '8px', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff', cursor: 'pointer', outline: 'none' }}
+        >
+          <option value="zh-TW">繁體中文 (zh-TW)</option>
+          <option value="en-US">English (en-US)</option>
+          <option value="zh-CN">简体中文 (zh-CN)</option>
+          <option value="vi-VN">Tiếng Việt (vi-VN)</option>
+          <option value="id-ID">Bahasa Indonesia (id-ID)</option>
+          <option value="th-TH">ไทย (th-TH)</option>
+          <option value="ja-JP">日本語 (ja-JP)</option>
+          <option value="ko-KR">한국어 (ko-KR)</option>
+          <option value="es-ES">Español (es-ES)</option>
+          <option value="fr-FR">Français (fr-FR)</option>
+          <option value="de-DE">Deutsch (de-DE)</option>
+          <option value="pt-BR">Português (pt-BR)</option>
+          <option value="ru-RU">Русский (ru-RU)</option>
+          <option value="ar-SA">العربية (ar-SA)</option>
+        </select>
+      </header>
+
 
       {/* Main dashboard content */}
       <main style={{ flex: 1, padding: '24px 30px', display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: '24px', boxSizing: 'border-box' }}>
