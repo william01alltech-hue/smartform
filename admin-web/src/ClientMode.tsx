@@ -14,6 +14,19 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates }) => {
   const [clientFileData, setClientFileData] = useState<Record<string, File>>({});
   const [isExporting, setIsExporting] = useState(false);
 
+  const [exportFolders, setExportFolders] = useState<any[]>([]);
+  const [targetFolderId, setTargetFolderId] = useState<string>('');
+  const [targetFilename, setTargetFilename] = useState<string>('');
+
+  React.useEffect(() => {
+    fetch(`${API_BASE}/api/export-folders`, { headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setExportFolders(data);
+      })
+      .catch(console.error);
+  }, []);
+
   if (!clientFolder && !clientTemplate) {
     return (
       <div style={{ flex: 1, padding: '20px', maxWidth: '800px', margin: '0 auto', width: '100%', boxSizing: 'border-box', overflowY: 'auto' }}>
@@ -133,13 +146,47 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates }) => {
         ))}
       </div>
       
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '12px', marginTop: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+        <h3 style={{ color: '#fff', fontSize: '16px', margin: 0 }}>💾 儲存與匯出設定</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: 500 }}>設定匯出檔名</label>
+          <input 
+            type="text" 
+            value={targetFilename}
+            onChange={(e) => setTargetFilename(e.target.value)}
+            placeholder={`例如: ${clientTemplate?.title}_20260703`}
+            style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '16px', outline: 'none' }}
+          />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: 500 }}>選擇雲端儲存資料夾 (選填)</label>
+          <select 
+            value={targetFolderId}
+            onChange={(e) => setTargetFolderId(e.target.value)}
+            style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '16px', outline: 'none' }}
+          >
+            <option value="">不儲存至雲端，僅下載至設備</option>
+            {exportFolders.map(f => (
+              <option key={f.id} value={f.id}>
+                {exportFolders.find(p => p.id === f.parentId)?.name ? `${exportFolders.find(p => p.id === f.parentId)?.name} > ` : ''}{f.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '16px 20px', background: 'rgba(24, 24, 27, 0.9)', backdropFilter: 'blur(10px)', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '12px', zIndex: 100 }}>
         <button 
           onClick={async () => {
             setIsExporting(true);
             try {
+
               const formData = new FormData();
               formData.append('data', JSON.stringify(clientFormData));
+              if (targetFolderId) formData.append('folderId', targetFolderId);
+              if (targetFilename) formData.append('filename', targetFilename);
+
               
               Object.keys(clientFileData).forEach((key) => {
                 formData.append(key, clientFileData[key]);

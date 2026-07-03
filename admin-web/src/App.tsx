@@ -4,6 +4,7 @@ const MASTER_TOKEN = import.meta.env.VITE_MASTER_TOKEN || 'william_master_token'
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import type { Language } from './context/LanguageContext';
 import { ClientMode } from './ClientMode';
+import { ExportManager } from './ExportManager';
 
 interface FieldConfig {
   name: string;
@@ -113,6 +114,7 @@ const Dashboard: React.FC = () => {
   const [showConfig, setShowConfig] = useState(true);
   const [showPreview, setShowPreview] = useState(true);
   const [showAppUI, setShowAppUI] = useState(true);
+  const [showExportManager, setShowExportManager] = useState(false);
   const [isClientMode, setIsClientMode] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -483,6 +485,7 @@ const Dashboard: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
             <button onClick={() => setShowPreview(!showPreview)} style={{ padding: '12px 16px', background: showPreview ? 'rgba(255,255,255,0.15)' : 'transparent', border: showPreview ? '1px solid rgba(255,255,255,0.5)' : '1px dashed rgba(255,255,255,0.2)', borderRadius: '8px', color: showPreview ? '#e4e4e7' : '#71717a', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>3. Excel 樣板表格預覽</button>
             <button onClick={() => setShowAppUI(!showAppUI)} style={{ padding: '12px 16px', background: showAppUI ? 'rgba(255,255,255,0.15)' : 'transparent', border: showAppUI ? '1px solid rgba(255,255,255,0.5)' : '1px dashed rgba(255,255,255,0.2)', borderRadius: '8px', color: showAppUI ? '#e4e4e7' : '#71717a', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>4. 模擬填寫端 App UI 渲染</button>
+            <button onClick={() => { setShowExportManager(!showExportManager); setShowAuth(false); setShowConfig(false); setShowPreview(false); setShowAppUI(false); }} style={{ padding: '12px 16px', background: showExportManager ? 'rgba(255,255,255,0.15)' : 'transparent', border: showExportManager ? '1px solid rgba(255,255,255,0.5)' : '1px dashed rgba(255,255,255,0.2)', borderRadius: '8px', color: showExportManager ? '#e4e4e7' : '#71717a', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s', marginTop: '12px' }}>5. 匯出資料夾管理</button>
           </div>
         </div>
 
@@ -547,6 +550,14 @@ const Dashboard: React.FC = () => {
       ) : (
       <main className="main-layout" style={{ gridTemplateColumns: [(showAuth || showConfig) ? 'minmax(0, 1.2fr)' : '', showPreview ? 'minmax(0, 1.5fr)' : '', showAppUI ? 'minmax(0, 0.8fr)' : ''].filter(Boolean).join(' ') }}>
         
+        
+        {/* Export Manager */}
+        {showExportManager && (
+          <div style={{ padding: '0 30px' }}>
+            <ExportManager />
+          </div>
+        )}
+
         {/* Column 2 (Left): File Upload & Configuration parameters mapping grid */}
         {(showAuth || showConfig) && (
         <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', maxHeight: `${Math.max(previewHeight + 80, 500)}px`, paddingRight: '8px' }}>
