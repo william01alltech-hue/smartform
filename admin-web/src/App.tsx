@@ -494,210 +494,9 @@ const Dashboard: React.FC = () => {
       </section>
 
       {/* Main dashboard content */}
-      <main style={{ flex: 1, padding: '24px 30px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 0.9fr)', gap: '24px', boxSizing: 'border-box' }}>
+      <main style={{ flex: 1, padding: '24px 30px', display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: '24px', boxSizing: 'border-box' }}>
         
-        {/* Column 1 (Left): Excel visual layout preview & cell click */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '18px' }}>📊</span>
-            <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>Excel 樣板表格預覽</h2>
-          </div>
-          
-          {visualSheets.length > 0 ? (
-            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', minHeight: '580px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', color: '#94a3b8' }}>💡 點擊下方表格格子即可直接設定對應</span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {visualSheets.map((sheet, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setActiveSheetIndex(index)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        backgroundColor: activeSheetIndex === index ? '#6366f1' : '#1e293b',
-                        border: 'none',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      {sheet.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="custom-scrollbar" style={{ overflowX: 'scroll', height: `${previewHeight}px`, overflowY: 'auto', border: '1px solid #cbd5e1', borderRadius: '12px', background: '#ffffff' }}>
-                <table style={{ borderCollapse: 'collapse', fontSize: '12px', color: '#1e293b', tableLayout: 'fixed', width: 'max-content', minWidth: '100%', zoom: zoomLevel } as React.CSSProperties}>
-                  <colgroup>
-                    <col style={{ width: '45px' }} />
-                    {(visualSheets[activeSheetIndex].columnWidths || []).map((w, idx) => (
-                      <col key={idx} style={{ width: `${w}px` }} />
-                    ))}
-                  </colgroup>
-                  <thead>
-                    <tr style={{ backgroundColor: '#f8fafc' }}>
-                      <th style={{ width: '45px', border: '1px solid #cbd5e1', padding: '6px', textAlign: 'center', color: '#64748b', fontWeight: 'bold' }}></th>
-                      {(visualSheets[activeSheetIndex].columnWidths || []).map((_, cIdx) => (
-                        <th key={cIdx} style={{ border: '1px solid #cbd5e1', padding: '6px', textAlign: 'center', color: '#64748b', fontWeight: 'bold' }}>
-                          {String.fromCharCode(65 + cIdx)}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visualSheets[activeSheetIndex].rows.map((row, rIdx) => {
-                      const rowHeight = visualSheets[activeSheetIndex].rowHeights?.[rIdx] || 26;
-                      return (
-                        <tr key={rIdx} style={{ height: `${rowHeight}px` }}>
-                          <td style={{
-                            backgroundColor: '#f8fafc',
-                            border: '1px solid #cbd5e1',
-                            padding: '4px',
-                            textAlign: 'center',
-                            color: '#64748b',
-                            fontWeight: 'normal',
-                            height: `${rowHeight}px`,
-                            userSelect: 'none'
-                          }}>
-                            {rIdx + 1}
-                          </td>
-                          {row.map((cell, cIdx) => {
-                            const existingField = fields.find((f) => f.rangeStr === cell.address);
-                            const isMapped = !!existingField;
-                            const isHighlighted = cell.address === highlightedRangeStr;
-
-                            if (cell.isSlave) return null;
-
-                            // Compute alignment values
-                            let flexAlignItems = 'center';
-                            if (cell.style?.verticalAlign === 'top') flexAlignItems = 'flex-start';
-                            else if (cell.style?.verticalAlign === 'bottom') flexAlignItems = 'flex-end';
-
-                            let flexJustifyContent = 'flex-start';
-                            if (cell.style?.textAlign === 'center') flexJustifyContent = 'center';
-                            else if (cell.style?.textAlign === 'right') flexJustifyContent = 'flex-end';
-
-                            return (
-                              <td
-                                key={cIdx}
-                                onClick={() => handleCellClick(cell)}
-                                rowSpan={cell.rowSpan}
-                                colSpan={cell.colSpan}
-                                style={{
-                                  padding: '6px 8px',
-                                  textOverflow: 'ellipsis',
-                                  overflow: 'hidden',
-                                  whiteSpace: cell.style?.wrapText ? 'normal' : 'nowrap',
-                                  wordBreak: cell.style?.wrapText ? 'break-word' : 'normal',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.15s ease',
-                                  backgroundColor: isHighlighted 
-                                    ? 'rgba(99, 102, 241, 0.4)' 
-                                    : (cell.style?.backgroundColor || (isMapped 
-                                    ? (existingField.type === 'image' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(99, 102, 241, 0.18)')
-                                    : 'transparent')),
-                                  color: cell.style?.color || '#1e293b',
-                                  fontWeight: (cell.style?.fontWeight as React.CSSProperties['fontWeight']) || 'normal',
-                                  fontStyle: (cell.style?.fontStyle as React.CSSProperties['fontStyle']) || 'normal',
-                                  fontSize: cell.style?.fontSize || '10pt',
-                                  textAlign: (cell.style?.textAlign as React.CSSProperties['textAlign']) || 'left',
-                                  textDecoration: cell.style?.textDecoration || 'none',
-                                  
-                                  // Border settings: use custom borders, fallback to default grid lines, override if mapped
-                                  borderTop: isMapped
-                                    ? `3px solid ${existingField.type === 'image' ? '#10b981' : '#6366f1'}`
-                                    : (cell.style?.borderTop || '1px solid #cbd5e1'),
-                                  borderLeft: isMapped
-                                    ? `3px solid ${existingField.type === 'image' ? '#10b981' : '#6366f1'}`
-                                    : (cell.style?.borderLeft || '1px solid #cbd5e1'),
-                                  borderBottom: isMapped
-                                    ? `3px solid ${existingField.type === 'image' ? '#10b981' : '#6366f1'}`
-                                    : (cell.style?.borderBottom || '1px solid #cbd5e1'),
-                                  borderRight: isMapped
-                                    ? `3px solid ${existingField.type === 'image' ? '#10b981' : '#6366f1'}`
-                                    : (cell.style?.borderRight || '1px solid #cbd5e1'),
-                                }}
-                                title={cell.address}
-                                onMouseEnter={(e) => {
-                                  if (!isMapped && !isHighlighted) e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  if (!isMapped && !isHighlighted) e.currentTarget.style.backgroundColor = cell.style?.backgroundColor || 'transparent';
-                                }}
-                              >
-                                <div style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  justifyContent: flexJustifyContent,
-                                  alignItems: flexAlignItems,
-                                  height: '100%',
-                                  width: '100%',
-                                  gap: '2px'
-                                }}>
-                                  {isMapped ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
-                                      <span style={{ fontWeight: 'bold', fontSize: '9px', color: existingField.type === 'image' ? '#10b981' : (existingField.type === 'signature' ? '#fbbf24' : '#818cf8'), letterSpacing: '0.2px' }}>
-                                        {existingField.type === 'image' && '📷 '}
-                                        {existingField.type === 'signature' && '✍️ '}
-                                        {existingField.type === 'text' && '✏️ '}
-                                        {existingField.type === 'date' && '📅 '}
-                                        {existingField.type === 'number' && '🔢 '}
-                                        {existingField.type === 'checkbox' && '☑️ '}
-                                        {existingField.type === 'mobile' && '📱 '}
-                                        {existingField.type === 'tel' && '☎️ '}
-                                        {existingField.name}
-                                      </span>
-                                      <span style={{ fontSize: '11px', color: cell.style?.color || '#1e293b' }}>{cell.value || existingField.label}</span>
-                                    </div>
-                                  ) : (
-                                    cell.value || ''
-                                  )}
-                                </div>
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              
-              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '4px 8px 0', flexWrap: 'wrap' }}>
-                 <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>↕️ 預覽高度</span>
-                 <input 
-                   type="range" 
-                   min="300" 
-                   max="1500" 
-                   step="50" 
-                   value={previewHeight} 
-                   onChange={(e) => setPreviewHeight(parseInt(e.target.value))} 
-                   style={{ width: '100px', accentColor: '#10b981', cursor: 'pointer' }} 
-                   title={`目前高度: ${previewHeight}px`}
-                 />
-                 <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500, marginLeft: '12px' }}>🔍 縮放比例 ({Math.round(zoomLevel * 100)}%)</span>
-                 <input 
-                   type="range" 
-                   min="0.3" 
-                   max="2.0" 
-                   step="0.05" 
-                   value={zoomLevel} 
-                   onChange={(e) => setZoomLevel(parseFloat(e.target.value))} 
-                   style={{ width: '150px', accentColor: '#6366f1', cursor: 'pointer' }} 
-                 />
-              </div>
-            </div>
-          ) : (
-            <div className="glass-panel" style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '580px', color: '#94a3b8', textAlign: 'center', gap: '16px' }}>
-
-            </div>
-          )}
-        </div>
-
-        {/* Column 2 (Middle): File Upload & Configuration parameters mapping grid */}
+        {/* Column 2 (Left): File Upload & Configuration parameters mapping grid */}
         <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', maxHeight: `${Math.max(previewHeight + 80, 500)}px`, paddingRight: '8px' }}>
           
           {/* Master/Sub Account Settings Panel */}
@@ -798,16 +597,15 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Upload template box */}
-          <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>{t('uploadTemplate')}</h2>
-            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '110px', border: '2px dashed #334155', borderRadius: '12px', cursor: 'pointer', transition: 'border-color 0.2s' }}>
+          {/* Upload template button */}
+          <div className="glass-panel" style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <label className="btn-primary" style={{ padding: '8px 16px', cursor: 'pointer', background: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              📁 選擇 Excel 樣板 (.xlsx)
               <input type="file" accept=".xlsx" onChange={handleFileUpload} style={{ display: 'none' }} />
-              <span style={{ fontSize: '24px', marginBottom: '4px' }}>📁</span>
-              <span style={{ fontSize: '13px', color: '#94a3b8' }}>
-                {selectedFile ? `${selectedFile.name}` : t('dropHere')}
-              </span>
             </label>
+            <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+              {selectedFile ? `已選取: ${selectedFile.name}` : '尚未選擇檔案'}
+            </span>
           </div>
 
           {/* Configuration Grid */}
@@ -1167,6 +965,207 @@ const Dashboard: React.FC = () => {
             )}
           </div>
         </div>
+        {/* Column 1 (Right): Excel visual layout preview & cell click */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px' }}>📊</span>
+            <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>Excel 樣板表格預覽</h2>
+          </div>
+          
+          {visualSheets.length > 0 ? (
+            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', minHeight: '580px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', color: '#94a3b8' }}>💡 點擊下方表格格子即可直接設定對應</span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {visualSheets.map((sheet, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setActiveSheetIndex(index)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: activeSheetIndex === index ? '#6366f1' : '#1e293b',
+                        border: 'none',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {sheet.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="custom-scrollbar" style={{ overflowX: 'scroll', height: `${previewHeight}px`, overflowY: 'auto', border: '1px solid #cbd5e1', borderRadius: '12px', background: '#ffffff' }}>
+                <table style={{ borderCollapse: 'collapse', fontSize: '12px', color: '#1e293b', tableLayout: 'fixed', width: 'max-content', minWidth: '100%', zoom: zoomLevel } as React.CSSProperties}>
+                  <colgroup>
+                    <col style={{ width: '45px' }} />
+                    {(visualSheets[activeSheetIndex].columnWidths || []).map((w, idx) => (
+                      <col key={idx} style={{ width: `${w}px` }} />
+                    ))}
+                  </colgroup>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f8fafc' }}>
+                      <th style={{ width: '45px', border: '1px solid #cbd5e1', padding: '6px', textAlign: 'center', color: '#64748b', fontWeight: 'bold' }}></th>
+                      {(visualSheets[activeSheetIndex].columnWidths || []).map((_, cIdx) => (
+                        <th key={cIdx} style={{ border: '1px solid #cbd5e1', padding: '6px', textAlign: 'center', color: '#64748b', fontWeight: 'bold' }}>
+                          {String.fromCharCode(65 + cIdx)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visualSheets[activeSheetIndex].rows.map((row, rIdx) => {
+                      const rowHeight = visualSheets[activeSheetIndex].rowHeights?.[rIdx] || 26;
+                      return (
+                        <tr key={rIdx} style={{ height: `${rowHeight}px` }}>
+                          <td style={{
+                            backgroundColor: '#f8fafc',
+                            border: '1px solid #cbd5e1',
+                            padding: '4px',
+                            textAlign: 'center',
+                            color: '#64748b',
+                            fontWeight: 'normal',
+                            height: `${rowHeight}px`,
+                            userSelect: 'none'
+                          }}>
+                            {rIdx + 1}
+                          </td>
+                          {row.map((cell, cIdx) => {
+                            const existingField = fields.find((f) => f.rangeStr === cell.address);
+                            const isMapped = !!existingField;
+                            const isHighlighted = cell.address === highlightedRangeStr;
+
+                            if (cell.isSlave) return null;
+
+                            // Compute alignment values
+                            let flexAlignItems = 'center';
+                            if (cell.style?.verticalAlign === 'top') flexAlignItems = 'flex-start';
+                            else if (cell.style?.verticalAlign === 'bottom') flexAlignItems = 'flex-end';
+
+                            let flexJustifyContent = 'flex-start';
+                            if (cell.style?.textAlign === 'center') flexJustifyContent = 'center';
+                            else if (cell.style?.textAlign === 'right') flexJustifyContent = 'flex-end';
+
+                            return (
+                              <td
+                                key={cIdx}
+                                onClick={() => handleCellClick(cell)}
+                                rowSpan={cell.rowSpan}
+                                colSpan={cell.colSpan}
+                                style={{
+                                  padding: '6px 8px',
+                                  textOverflow: 'ellipsis',
+                                  overflow: 'hidden',
+                                  whiteSpace: cell.style?.wrapText ? 'normal' : 'nowrap',
+                                  wordBreak: cell.style?.wrapText ? 'break-word' : 'normal',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease',
+                                  backgroundColor: isHighlighted 
+                                    ? 'rgba(99, 102, 241, 0.4)' 
+                                    : (cell.style?.backgroundColor || (isMapped 
+                                    ? (existingField.type === 'image' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(99, 102, 241, 0.18)')
+                                    : 'transparent')),
+                                  color: cell.style?.color || '#1e293b',
+                                  fontWeight: (cell.style?.fontWeight as React.CSSProperties['fontWeight']) || 'normal',
+                                  fontStyle: (cell.style?.fontStyle as React.CSSProperties['fontStyle']) || 'normal',
+                                  fontSize: cell.style?.fontSize || '10pt',
+                                  textAlign: (cell.style?.textAlign as React.CSSProperties['textAlign']) || 'left',
+                                  textDecoration: cell.style?.textDecoration || 'none',
+                                  
+                                  // Border settings: use custom borders, fallback to default grid lines, override if mapped
+                                  borderTop: isMapped
+                                    ? `3px solid ${existingField.type === 'image' ? '#10b981' : '#6366f1'}`
+                                    : (cell.style?.borderTop || '1px solid #cbd5e1'),
+                                  borderLeft: isMapped
+                                    ? `3px solid ${existingField.type === 'image' ? '#10b981' : '#6366f1'}`
+                                    : (cell.style?.borderLeft || '1px solid #cbd5e1'),
+                                  borderBottom: isMapped
+                                    ? `3px solid ${existingField.type === 'image' ? '#10b981' : '#6366f1'}`
+                                    : (cell.style?.borderBottom || '1px solid #cbd5e1'),
+                                  borderRight: isMapped
+                                    ? `3px solid ${existingField.type === 'image' ? '#10b981' : '#6366f1'}`
+                                    : (cell.style?.borderRight || '1px solid #cbd5e1'),
+                                }}
+                                title={cell.address}
+                                onMouseEnter={(e) => {
+                                  if (!isMapped && !isHighlighted) e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isMapped && !isHighlighted) e.currentTarget.style.backgroundColor = cell.style?.backgroundColor || 'transparent';
+                                }}
+                              >
+                                <div style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: flexJustifyContent,
+                                  alignItems: flexAlignItems,
+                                  height: '100%',
+                                  width: '100%',
+                                  gap: '2px'
+                                }}>
+                                  {isMapped ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
+                                      <span style={{ fontWeight: 'bold', fontSize: '9px', color: existingField.type === 'image' ? '#10b981' : (existingField.type === 'signature' ? '#fbbf24' : '#818cf8'), letterSpacing: '0.2px' }}>
+                                        {existingField.type === 'image' && '📷 '}
+                                        {existingField.type === 'signature' && '✍️ '}
+                                        {existingField.type === 'text' && '✏️ '}
+                                        {existingField.type === 'date' && '📅 '}
+                                        {existingField.type === 'number' && '🔢 '}
+                                        {existingField.type === 'checkbox' && '☑️ '}
+                                        {existingField.type === 'mobile' && '📱 '}
+                                        {existingField.type === 'tel' && '☎️ '}
+                                        {existingField.name}
+                                      </span>
+                                      <span style={{ fontSize: '11px', color: cell.style?.color || '#1e293b' }}>{cell.value || existingField.label}</span>
+                                    </div>
+                                  ) : (
+                                    cell.value || ''
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '4px 8px 0', flexWrap: 'wrap' }}>
+                 <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>↕️ 預覽高度</span>
+                 <input 
+                   type="range" 
+                   min="300" 
+                   max="1500" 
+                   step="50" 
+                   value={previewHeight} 
+                   onChange={(e) => setPreviewHeight(parseInt(e.target.value))} 
+                   style={{ width: '100px', accentColor: '#10b981', cursor: 'pointer' }} 
+                   title={`目前高度: ${previewHeight}px`}
+                 />
+                 <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500, marginLeft: '12px' }}>🔍 縮放比例 ({Math.round(zoomLevel * 100)}%)</span>
+                 <input 
+                   type="range" 
+                   min="0.3" 
+                   max="2.0" 
+                   step="0.05" 
+                   value={zoomLevel} 
+                   onChange={(e) => setZoomLevel(parseFloat(e.target.value))} 
+                   style={{ width: '150px', accentColor: '#6366f1', cursor: 'pointer' }} 
+                 />
+              </div>
+            </div>
+          ) : (
+            <div className="glass-panel" style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '580px', color: '#94a3b8', textAlign: 'center', gap: '16px' }}>
+
+            </div>
+          )}
+        </div>
+
       </main>
 
       {/* Editing Permissions Modal */}
