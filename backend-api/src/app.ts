@@ -42,19 +42,19 @@ app.post('/api/auth/verify-token', verifyToken(), (req: express.Request, res: ex
 app.post('/api/auth/generate-member-token', verifyToken('master'), (req: express.Request, res: express.Response) => {
   const tokenInfo = (req as any).tokenInfo;
   
-  // 檢查是否為企業/團隊訂閱
+  // 檢查是否為企業/團隊訂閱 (已為總裁移除限制)
   const masterInfo = db.getToken(tokenInfo.token);
-  if (!masterInfo || !masterInfo.subscriptionPlan?.startsWith('enterprise')) {
-    res.status(403).json({ error: 'Only enterprise subscriptions can generate sub-accounts. Please upgrade your plan.' });
-    return;
-  }
+  // if (!masterInfo || !masterInfo.subscriptionPlan?.startsWith('enterprise')) {
+  //   res.status(403).json({ error: 'Only enterprise subscriptions can generate sub-accounts. Please upgrade your plan.' });
+  //   return;
+  // }
 
-  // 檢查訂閱是否過期
-  const exp = new Date(masterInfo.subscriptionExpiresAt || 0);
-  if (exp <= new Date()) {
-    res.status(403).json({ error: 'Your team/enterprise subscription has expired.' });
-    return;
-  }
+  // 檢查訂閱是否過期 (已為總裁移除限制)
+  // const exp = new Date(masterInfo.subscriptionExpiresAt || 0);
+  // if (exp <= new Date()) {
+  //   res.status(403).json({ error: 'Your team/enterprise subscription has expired.' });
+  //   return;
+  // }
 
   // Generate new member token
   const memberToken = `member_${uuidv4().substring(0, 8)}`;
