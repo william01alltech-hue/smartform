@@ -1,7 +1,8 @@
 {
   "services": {
     "smartform-backend": {
-      "root": "."
+      "root": ".",
+      "entrypoint": "dist/app.js"
     }
   },
   "rewrites": [
