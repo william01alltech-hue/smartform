@@ -444,14 +444,16 @@ const Dashboard: React.FC = () => {
             <option value="ar-SA">العربية (ar-SA)</option>
           </select>
           {/* Upload Button (Left) */}
-          <div className="glass-panel" style={{ padding: '16px', minWidth: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+          <div className="glass-panel" style={{ padding: '12px', minWidth: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
             <label className="btn-primary" style={{ padding: '6px 12px', cursor: 'pointer', background: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '8px', margin: 0 }}>
               📁 選擇 Excel 樣板 (.xlsx)
               <input type="file" accept=".xlsx" onChange={handleFileUpload} style={{ display: 'none' }} />
             </label>
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-              {selectedFile ? `已選取: ${selectedFile.name}` : '尚未選擇檔案'}
-            </span>
+            {selectedFile && (
+              <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                已選取: {selectedFile.name}
+              </span>
+            )}
           </div>
         </div>
       {/* Top Header Controls */}
