@@ -534,7 +534,7 @@ const Dashboard: React.FC = () => {
         {/* Column 1 (Right): Excel visual layout preview & cell click */}
         {showPreview && (
         <div id="preview-section" className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', minHeight: '580px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <span style={{ fontSize: '18px' }}>📊</span>
             <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>Excel 樣板表格預覽</h2>
           </div>
