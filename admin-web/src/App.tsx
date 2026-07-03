@@ -117,7 +117,13 @@ const Dashboard: React.FC = () => {
   // The modal state has been removed as the table is fully inline editable
 
   // Master/Sub-account Token States
-  const [memberTokens, setMemberTokens] = useState<string[]>([]);
+  interface MemberTokenData {
+    token: string;
+    allowedFolders?: string[];
+  }
+  const [memberTokens, setMemberTokens] = useState<MemberTokenData[]>([]);
+  const [editingToken, setEditingToken] = useState<string | null>(null);
+  const [editingFolders, setEditingFolders] = useState<Set<string>>(new Set());
   const [publishStatus, setPublishStatus] = useState<string>('');
   
   // Cloud Templates State
@@ -135,8 +141,23 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const fetchMemberTokens = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/member-tokens`, {
+        headers: { 'Authorization': MASTER_TOKEN }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMemberTokens(data.members);
+      }
+    } catch (e) {
+      console.error('Error fetching member tokens:', e);
+    }
+  };
+
   useEffect(() => {
     fetchTemplates();
+    fetchMemberTokens();
   }, []);
 
   const generateMemberToken = async () => {
@@ -151,9 +172,70 @@ const Dashboard: React.FC = () => {
       });
       const data = await response.json();
       if (data.success) {
-        setMemberTokens(prev => [...prev, data.memberToken]);
+        setMemberTokens(prev => [...prev, { token: data.memberToken, allowedFolders: data.allowedFolders }]);
       } else {
         alert('無法產生成員金鑰: ' + data.error);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('無法連線至後端伺服器');
+    }
+  };
+
+  const deleteMemberToken = async (tokenToDelete: string) => {
+    if (!window.confirm(`確定要刪除金鑰 ${tokenToDelete} 嗎？此操作將使該員工無法登入。`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/member-tokens/${tokenToDelete}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': MASTER_TOKEN }
+      });
+      if (res.ok) {
+        setMemberTokens(prev => prev.filter(t => t.token !== tokenToDelete));
+      } else {
+        alert('刪除失敗');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('無法連線至後端伺服器');
+    }
+  };
+
+  const saveTokenPermissions = async () => {
+    if (!editingToken) return;
+    try {
+      // If the set is exactly all available folders, or empty, the logic is:
+      // Empty set = empty array -> no access.
+      // Full set = all access. But wait, if they check all, maybe we just save the array of all, 
+      // or we can save undefined for true 'all access' (so future folders are also allowed).
+      // Let's just save the array. If it's an array, it's explicitly allowed. 
+      // Wait, the user said "全選才是給全部權限". Saving undefined if it matches all existing folders means future folders are auto-granted. 
+      // Let's keep it simple and just save `Array.from(editingFolders)`. If they want to see new folders, they must be given access.
+      // Wait, if undefined is passed, the backend treats it as undefined.
+      // "全勾選才是給全部權限". If the array length equals all folders length, let's pass `undefined` to grant "all access forever".
+      const allAvailableFolders = Array.from(new Set(cloudTemplates.map(t => t.folder).filter(f => f)));
+      let payloadFolders: string[] | undefined = Array.from(editingFolders);
+      
+      if (editingFolders.size === allAvailableFolders.length && allAvailableFolders.length > 0) {
+        payloadFolders = undefined; // Grant universal access
+      } else if (allAvailableFolders.length === 0 && editingFolders.size === 0) {
+        // If there are no folders in the system at all, and they hit save, let's just make it universal or empty?
+        // Let's default to empty array (no access) unless they have universal.
+        // Actually, if payloadFolders is [], it means no access.
+      }
+      
+      const res = await fetch(`${API_BASE}/api/auth/member-tokens/${editingToken}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': MASTER_TOKEN
+        },
+        body: JSON.stringify({ allowedFolders: payloadFolders })
+      });
+      if (res.ok) {
+        setMemberTokens(prev => prev.map(t => t.token === editingToken ? { ...t, allowedFolders: payloadFolders } : t));
+        setEditingToken(null);
+      } else {
+        alert('權限更新失敗');
       }
     } catch (e) {
       console.error(e);
@@ -717,24 +799,55 @@ const Dashboard: React.FC = () => {
               {memberTokens.length === 0 ? (
                 <span style={{ fontSize: '12px', color: '#475569', fontStyle: 'italic' }}>尚未產生成員金鑰，點擊上方按鈕以新增。</span>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '100px', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
                   {memberTokens.map((t, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <input
-                        type="text"
-                        readOnly
-                        value={t}
-                        style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', backgroundColor: '#0f172a', border: '1px solid #1e293b', color: '#10b981', fontSize: '11px' }}
-                      />
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(t);
-                          alert(`成員金鑰 ${t} 已複製！`);
-                        }}
-                        style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#334155', border: 'none', color: '#fff', fontSize: '11px', cursor: 'pointer' }}
-                      >
-                        複製
-                      </button>
+                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#0f172a', padding: '8px', borderRadius: '8px', border: '1px solid #1e293b' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          readOnly
+                          value={t.token}
+                          style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', backgroundColor: '#000', border: 'none', color: '#10b981', fontSize: '11px' }}
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(t.token);
+                            alert(`成員金鑰 ${t.token} 已複製！`);
+                          }}
+                          style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#334155', border: 'none', color: '#fff', fontSize: '11px', cursor: 'pointer' }}
+                        >
+                          複製
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingToken(t.token);
+                            setEditingFolders(new Set(t.allowedFolders || [])); // If undefined, we could treat it as "empty" in UI, but wait: if undefined, the user had "all access" implicitly before. Let's just initialize it empty for simplicity or with all available. If it's undefined, let's pre-check all.
+                            if (t.allowedFolders === undefined) {
+                              const allFolders = Array.from(new Set(cloudTemplates.map(tmpl => tmpl.folder).filter(f => f)));
+                              setEditingFolders(new Set(allFolders));
+                            }
+                          }}
+                          style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#eab308', border: 'none', color: '#000', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
+                        >
+                          權限設定
+                        </button>
+                        <button
+                          onClick={() => deleteMemberToken(t.token)}
+                          style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#ef4444', border: 'none', color: '#fff', fontSize: '11px', cursor: 'pointer' }}
+                        >
+                          刪除
+                        </button>
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#64748b', paddingLeft: '4px' }}>
+                        授權專案：
+                        {t.allowedFolders === undefined ? (
+                          <span style={{ color: '#10b981' }}>全部允許 (全選)</span>
+                        ) : t.allowedFolders.length === 0 ? (
+                          <span style={{ color: '#ef4444' }}>無權限 (全部未勾選)</span>
+                        ) : (
+                          <span style={{ color: '#38bdf8' }}>{t.allowedFolders.join(', ')}</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1099,7 +1212,82 @@ const Dashboard: React.FC = () => {
             )}
           </div>
         </div>
-      </main>
+      </div>
+
+      {/* Editing Permissions Modal */}
+      {editingToken && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+        }}>
+          <div className="glass-panel" style={{ padding: '24px', width: '400px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <h2 style={{ margin: 0, fontSize: '18px', color: '#fff' }}>設定專案權限</h2>
+            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+              設定金鑰 <span style={{ color: '#10b981' }}>{editingToken}</span> 的可見資料夾。<br/>
+              <b>全不勾選：無任何權限 (遊客)。全勾選：全部權限。</b>
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto', backgroundColor: '#0f172a', padding: '12px', borderRadius: '8px' }}>
+              {Array.from(new Set(cloudTemplates.map(t => t.folder).filter(f => f))).length === 0 ? (
+                <div style={{ color: '#64748b', fontSize: '12px', textAlign: 'center' }}>目前雲端沒有任何包含資料夾名稱的表單。</div>
+              ) : (
+                Array.from(new Set(cloudTemplates.map(t => t.folder).filter(f => f))).map((f, idx) => (
+                  <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0', fontSize: '14px', cursor: 'pointer' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={editingFolders.has(f)}
+                      onChange={(e) => {
+                        const newSet = new Set(editingFolders);
+                        if (e.target.checked) newSet.add(f);
+                        else newSet.delete(f);
+                        setEditingFolders(newSet);
+                      }}
+                      style={{ accentColor: '#6366f1', width: '16px', height: '16px' }}
+                    />
+                    📁 {f}
+                  </label>
+                ))
+              )}
+            </div>
+            
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', marginTop: '8px' }}>
+              <div>
+                <button 
+                  onClick={() => {
+                    const all = Array.from(new Set(cloudTemplates.map(t => t.folder).filter(f => f)));
+                    setEditingFolders(new Set(all));
+                  }}
+                  style={{ padding: '6px 12px', borderRadius: '6px', background: '#334155', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px', marginRight: '8px' }}
+                >
+                  全選
+                </button>
+                <button 
+                  onClick={() => setEditingFolders(new Set())}
+                  style={{ padding: '6px 12px', borderRadius: '6px', background: '#334155', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px' }}
+                >
+                  全不選
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={() => setEditingToken(null)}
+                  style={{ padding: '8px 16px', borderRadius: '6px', background: '#334155', color: '#fff', border: 'none', cursor: 'pointer' }}
+                >
+                  取消
+                </button>
+                <button 
+                  onClick={saveTokenPermissions}
+                  className="btn-primary"
+                  style={{ padding: '8px 16px', borderRadius: '6px' }}
+                >
+                  儲存權限
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

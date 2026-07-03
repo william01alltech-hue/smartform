@@ -58,13 +58,75 @@ app.post('/api/auth/generate-member-token', verifyToken('master'), (req: express
 
   // Generate new member token
   const memberToken = `member_${uuidv4().substring(0, 8)}`;
-  db.createToken(memberToken, 'member', tokenInfo.token);
+  const tokenInfoObj = db.createToken(memberToken, 'member', tokenInfo.token);
+  // Default to undefined (all access). We will allow modifying it later.
 
   res.json({
     success: true,
-    memberToken
+    memberToken,
+    allowedFolders: tokenInfoObj.allowedFolders
   });
 });
+
+// 2.1 Get all member tokens for a master token
+app.get('/api/auth/member-tokens', verifyToken('master'), (req: express.Request, res: express.Response) => {
+  const tokenInfo = (req as any).tokenInfo;
+  const members = db.getMemberTokens(tokenInfo.token);
+  res.json({
+    success: true,
+    members: members.map(m => ({
+      token: m.token,
+      allowedFolders: m.allowedFolders
+    }))
+  });
+});
+
+// 2.2 Update member token folders
+app.put('/api/auth/member-tokens/:token', verifyToken('master'), (req: express.Request, res: express.Response) => {
+  const tokenInfo = (req as any).tokenInfo;
+  const memberToken = req.params.token;
+  
+  // Verify that this member token belongs to the master
+  const memberInfo = db.getToken(memberToken);
+  if (!memberInfo || memberInfo.masterToken !== tokenInfo.token) {
+    res.status(404).json({ error: 'Member token not found or unauthorized' });
+    return;
+  }
+
+  const { allowedFolders } = req.body;
+  
+  // if allowedFolders is passed as null or undefined, we treat it as undefined (all access)
+  // if it's an array, we save it.
+  const foldersToSave = Array.isArray(allowedFolders) ? allowedFolders : undefined;
+  
+  const success = db.updateTokenFolders(memberToken, foldersToSave);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to update token' });
+  }
+});
+
+// 2.3 Delete member token
+app.delete('/api/auth/member-tokens/:token', verifyToken('master'), (req: express.Request, res: express.Response) => {
+  const tokenInfo = (req as any).tokenInfo;
+  const memberToken = req.params.token;
+  
+  // Verify that this member token belongs to the master
+  const memberInfo = db.getToken(memberToken);
+  if (!memberInfo || memberInfo.masterToken !== tokenInfo.token) {
+    res.status(404).json({ error: 'Member token not found or unauthorized' });
+    return;
+  }
+
+  const success = db.deleteToken(memberToken);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to delete token' });
+  }
+});
+
 
 // --- Points & Economy Routing ---
 
