@@ -513,16 +513,31 @@ app.post(
       let isUnlimited = false;
       const now = new Date();
 
-      if (tokenInfo.subscriptionPlan && tokenInfo.subscriptionPlan !== 'personal_ad') {
+      // Master token is always unlimited
+      if (tokenInfo.role === 'master') {
+        isUnlimited = true;
+      }
+
+      // Check trial period
+      if (!isUnlimited && tokenInfo.trialExpiresAt) {
+        const trialExp = new Date(tokenInfo.trialExpiresAt);
+        if (trialExp > now) isUnlimited = true;
+      }
+
+      if (!isUnlimited && tokenInfo.subscriptionPlan && tokenInfo.subscriptionPlan !== 'personal_ad') {
         const exp = new Date(tokenInfo.subscriptionExpiresAt || 0);
         if (exp > now) isUnlimited = true;
       }
 
       if (!isUnlimited && tokenInfo.role === 'member' && tokenInfo.masterToken) {
         const masterInfo = db.getToken(tokenInfo.masterToken);
-        if (masterInfo && masterInfo.subscriptionPlan && masterInfo.subscriptionPlan !== 'personal_ad') {
-          const mExp = new Date(masterInfo.subscriptionExpiresAt || 0);
-          if (mExp > now) isUnlimited = true;
+        if (masterInfo) {
+          // Master is always unlimited; member inherits
+          if (masterInfo.role === 'master') isUnlimited = true;
+          else if (masterInfo.subscriptionPlan && masterInfo.subscriptionPlan !== 'personal_ad') {
+            const mExp = new Date(masterInfo.subscriptionExpiresAt || 0);
+            if (mExp > now) isUnlimited = true;
+          }
         }
       }
 
