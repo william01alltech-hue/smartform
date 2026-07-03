@@ -200,48 +200,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const saveTokenPermissions = async () => {
-    if (!editingToken) return;
-    try {
-      // If the set is exactly all available folders, or empty, the logic is:
-      // Empty set = empty array -> no access.
-      // Full set = all access. But wait, if they check all, maybe we just save the array of all, 
-      // or we can save undefined for true 'all access' (so future folders are also allowed).
-      // Let's just save the array. If it's an array, it's explicitly allowed. 
-      // Wait, the user said "全選才是給全部權限". Saving undefined if it matches all existing folders means future folders are auto-granted. 
-      // Let's keep it simple and just save `Array.from(editingFolders)`. If they want to see new folders, they must be given access.
-      // Wait, if undefined is passed, the backend treats it as undefined.
-      // "全勾選才是給全部權限". If the array length equals all folders length, let's pass `undefined` to grant "all access forever".
-      const allAvailableFolders = Array.from(new Set(cloudTemplates.map(t => t.folder).filter(f => f)));
-      let payloadFolders: string[] | undefined = Array.from(editingFolders);
-      
-      if (editingFolders.size === allAvailableFolders.length && allAvailableFolders.length > 0) {
-        payloadFolders = undefined; // Grant universal access
-      } else if (allAvailableFolders.length === 0 && editingFolders.size === 0) {
-        // If there are no folders in the system at all, and they hit save, let's just make it universal or empty?
-        // Let's default to empty array (no access) unless they have universal.
-        // Actually, if payloadFolders is [], it means no access.
-      }
-      
-      const res = await fetch(`${API_BASE}/api/auth/member-tokens/${editingToken}`, {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': MASTER_TOKEN
-        },
-        body: JSON.stringify({ allowedFolders: payloadFolders })
-      });
-      if (res.ok) {
-        setMemberTokens(prev => prev.map(t => t.token === editingToken ? { ...t, allowedFolders: payloadFolders } : t));
-        setEditingToken(null);
-      } else {
-        alert('權限更新失敗');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('無法連線至後端伺服器');
-    }
-  };
+
 
   const publishToCloud = async () => {
     if (!selectedFile) {
@@ -733,11 +692,7 @@ const Dashboard: React.FC = () => {
             </div>
           ) : (
             <div className="glass-panel" style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '580px', color: '#94a3b8', textAlign: 'center', gap: '16px' }}>
-              <span style={{ fontSize: '48px' }}>📊</span>
-              <p style={{ margin: 0, fontWeight: 500 }}>請先上傳 Excel 樣板</p>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b', maxWidth: '300px' }}>
-                上傳後，此處將以高還原度顯示 Excel 表格，方便您直接點擊儲存格進行設定。
-              </p>
+
             </div>
           )}
         </div>
@@ -1212,7 +1167,7 @@ const Dashboard: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Editing Permissions Modal */}
       {editingToken && (
@@ -1225,12 +1180,12 @@ const Dashboard: React.FC = () => {
             <h2 style={{ margin: 0, fontSize: '18px', color: '#fff' }}>設定專案權限</h2>
             <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
               設定金鑰 <span style={{ color: '#10b981' }}>{editingToken}</span> 的可見資料夾。<br/>
-              <b>全不勾選：無任何權限 (遊客)。全勾選：全部權限。</b>
+              <b>提醒：若要給予所有專案與未分類表單的權限，請點擊「全部權限」。</b>
             </p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto', backgroundColor: '#0f172a', padding: '12px', borderRadius: '8px' }}>
               {Array.from(new Set(cloudTemplates.map(t => t.folder).filter(f => f))).length === 0 ? (
-                <div style={{ color: '#64748b', fontSize: '12px', textAlign: 'center' }}>目前雲端沒有任何包含資料夾名稱的表單。</div>
+                <div style={{ color: '#64748b', fontSize: '12px', textAlign: 'center' }}>目前沒有任何具名專案資料夾。<br/>若要讓員工看見未分類表單，請使用「全部權限」。</div>
               ) : (
                 Array.from(new Set(cloudTemplates.map(t => t.folder).filter(f => f))).map((f, idx) => (
                   <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0', fontSize: '14px', cursor: 'pointer' }}>
@@ -1266,7 +1221,7 @@ const Dashboard: React.FC = () => {
                   onClick={() => setEditingFolders(new Set())}
                   style={{ padding: '6px 12px', borderRadius: '6px', background: '#334155', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px' }}
                 >
-                  全不選
+                  全不選 (無權限)
                 </button>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -1277,11 +1232,40 @@ const Dashboard: React.FC = () => {
                   取消
                 </button>
                 <button 
-                  onClick={saveTokenPermissions}
+                  onClick={async () => {
+                    // 全局存取權：發送 undefined
+                    const res = await fetch(`${API_BASE}/api/auth/member-tokens/${editingToken}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': MASTER_TOKEN },
+                      body: JSON.stringify({ allowedFolders: undefined })
+                    });
+                    if (res.ok) {
+                      setMemberTokens(prev => prev.map(t => t.token === editingToken ? { ...t, allowedFolders: undefined } : t));
+                      setEditingToken(null);
+                    } else alert('權限更新失敗');
+                  }}
+                  style={{ padding: '8px 16px', borderRadius: '6px', background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer' }}
+                >
+                  全部權限
+                </button>
+                <button 
+                  onClick={async () => {
+                    // 儲存特定勾選：發送陣列 (即使是空陣列也代表無權限)
+                    const payloadFolders = Array.from(editingFolders);
+                    const res = await fetch(`${API_BASE}/api/auth/member-tokens/${editingToken}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': MASTER_TOKEN },
+                      body: JSON.stringify({ allowedFolders: payloadFolders })
+                    });
+                    if (res.ok) {
+                      setMemberTokens(prev => prev.map(t => t.token === editingToken ? { ...t, allowedFolders: payloadFolders } : t));
+                      setEditingToken(null);
+                    } else alert('權限更新失敗');
+                  }}
                   className="btn-primary"
                   style={{ padding: '8px 16px', borderRadius: '6px' }}
                 >
-                  儲存權限
+                  儲存勾選
                 </button>
               </div>
             </div>
