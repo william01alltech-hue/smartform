@@ -426,7 +426,7 @@ export class ExcelService {
   public static async fillTemplate(
     templateBuffer: Buffer,
     data: Record<string, string>,
-    files: Record<string, Buffer>,
+    imageBuffers: Record<string, Buffer[]>,
     customFields?: Array<{ name: string; rangeStr: string; type?: string }>
   ): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
@@ -466,18 +466,11 @@ export class ExcelService {
         : /photo|image|pic|img/i.test(name);
 
       if (isImage) {
-        // If there's an uploaded file for this named range (photos or signatures)
-        const fileBuffer = files[name];
-        if (fileBuffer) {
-          // Add image to workbook
-          const imageId = workbook.addImage({
-            buffer: fileBuffer as any,
-            extension: 'jpeg', // Or detect extension
-          });
+        // Multi-photo support: imageBuffers[name] is Buffer[]
+        const fileBuffers = imageBuffers[name];
+        if (fileBuffers && fileBuffers.length > 0) {
 
-          const mode = (fieldConfig as any)?.imageSizeMode || 'fill';
-          
-          // Check if this cell is part of a merge range
+          // Detect merge range
           let effectiveStartCol = parsedRange.startCol;
           let effectiveEndCol = parsedRange.endCol;
           let effectiveStartRow = parsedRange.startRow;
@@ -502,73 +495,99 @@ export class ExcelService {
               break;
             }
           }
-          
-          if (mode === 'fill') {
-            // Place the image precisely in the range (Stretches)
-            worksheet.addImage(imageId, {
-              tl: { col: effectiveStartCol - 1, row: effectiveStartRow - 1 } as any,
-              br: { col: effectiveEndCol, row: effectiveEndRow } as any,
-              editAs: 'oneCell'
-            });
-          } else {
-            // Calculate cell pixel dimensions based on effective merged bounds
-            let rangeWidthPx = 0;
-            for (let c = effectiveStartCol; c <= effectiveEndCol; c++) {
-              const w = worksheet.getColumn(c).width;
-              rangeWidthPx += Math.round((w !== undefined && w > 0 ? w : 9) * 8); // approx 8 px per character
-            }
-            let rangeHeightPx = 0;
-            for (let r = effectiveStartRow; r <= effectiveEndRow; r++) {
-              const h = worksheet.getRow(r).height;
-              rangeHeightPx += Math.round((h !== undefined && h > 0 ? h : 15) * 1.3333); // approx 1.33 px per point
-            }
 
-            let extWidthPx = rangeWidthPx;
-            let extHeightPx = rangeHeightPx;
-            let offsetX_Px = 0;
-            let offsetY_Px = 0;
+          const mode = (fieldConfig as any)?.imageSizeMode || 'fill';
+          const count = fileBuffers.length;
 
-            if (mode === 'padding10') {
-              const paddingPx = 13; // ~10pt
-              extWidthPx = Math.max(10, rangeWidthPx - 2 * paddingPx);
-              extHeightPx = Math.max(10, rangeHeightPx - 2 * paddingPx);
-              offsetX_Px = paddingPx;
-              offsetY_Px = paddingPx;
-            } else if (mode === 'contain') {
-              const imgAspect = fieldConfig?.aspectRatio || 1.3333;
-              const cellAspect = rangeWidthPx / rangeHeightPx;
-
-              if (cellAspect > imgAspect) {
-                // Cell is wider than image. Height dictates scale.
-                extHeightPx = rangeHeightPx;
-                extWidthPx = Math.round(extHeightPx * imgAspect);
-                offsetX_Px = Math.round((rangeWidthPx - extWidthPx) / 2);
-              } else {
-                // Cell is taller than image. Width dictates scale.
-                extWidthPx = rangeWidthPx;
-                extHeightPx = Math.round(extWidthPx / imgAspect);
-                offsetY_Px = Math.round((rangeHeightPx - extHeightPx) / 2);
-              }
-            }
-
-            // Calculate fractional offset based on the FIRST column/row of the MERGED cell
-            const firstColW = worksheet.getColumn(effectiveStartCol).width || 9;
-            const firstColPx = Math.round(firstColW * 8);
-            const colFraction = firstColPx > 0 ? (offsetX_Px / firstColPx) : 0;
-
-            const firstRowH = worksheet.getRow(effectiveStartRow).height || 15;
-            const firstRowPx = Math.round(firstRowH * 1.3333);
-            const rowFraction = firstRowPx > 0 ? (offsetY_Px / firstRowPx) : 0;
-
-            worksheet.addImage(imageId, {
-              tl: { 
-                col: (effectiveStartCol - 1) + colFraction, 
-                row: (effectiveStartRow - 1) + rowFraction 
-              } as any,
-              ext: { width: extWidthPx, height: extHeightPx },
-              editAs: 'oneCell'
-            });
+          // Calculate total cell pixel dimensions
+          let rangeWidthPx = 0;
+          for (let c = effectiveStartCol; c <= effectiveEndCol; c++) {
+            const w = worksheet.getColumn(c).width;
+            rangeWidthPx += Math.round((w !== undefined && w > 0 ? w : 9) * 8);
           }
+          let rangeHeightPx = 0;
+          for (let r = effectiveStartRow; r <= effectiveEndRow; r++) {
+            const h = worksheet.getRow(r).height;
+            rangeHeightPx += Math.round((h !== undefined && h > 0 ? h : 15) * 1.3333);
+          }
+
+          const firstColW = worksheet.getColumn(effectiveStartCol).width || 9;
+          const firstColPx = Math.round(firstColW * 8);
+          const firstRowH = worksheet.getRow(effectiveStartRow).height || 15;
+          const firstRowPx = Math.round(firstRowH * 1.3333);
+
+          // Determine grid layout based on count
+          let gridCols = 1, gridRows = 1;
+          if (count === 2) {
+            if (rangeWidthPx >= rangeHeightPx) { gridCols = 2; gridRows = 1; }
+            else { gridCols = 1; gridRows = 2; }
+          } else if (count >= 3) {
+            gridCols = 2; gridRows = 2;
+          }
+
+          const cellW = rangeWidthPx / gridCols;
+          const cellH = rangeHeightPx / gridRows;
+
+          fileBuffers.slice(0, 4).forEach((fileBuffer, idx) => {
+            const imageId = workbook.addImage({
+              buffer: fileBuffer as any,
+              extension: 'jpeg',
+            });
+
+            const gc = idx % gridCols;
+            const gr = Math.floor(idx / gridCols);
+
+            const baseOffsetX = gc * cellW;
+            const baseOffsetY = gr * cellH;
+
+            if (mode === 'fill') {
+              worksheet.addImage(imageId, {
+                tl: {
+                  col: (effectiveStartCol - 1) + (baseOffsetX / firstColPx),
+                  row: (effectiveStartRow - 1) + (baseOffsetY / firstRowPx)
+                } as any,
+                ext: { width: cellW, height: cellH },
+                editAs: 'oneCell'
+              });
+            } else {
+              let extWidthPx = cellW;
+              let extHeightPx = cellH;
+              let offsetX = 0;
+              let offsetY = 0;
+
+              if (mode === 'padding10') {
+                const pad = count > 1 ? 5 : 13;
+                extWidthPx = Math.max(10, cellW - 2 * pad);
+                extHeightPx = Math.max(10, cellH - 2 * pad);
+                offsetX = pad;
+                offsetY = pad;
+              } else if (mode === 'contain') {
+                const imgAspect = fieldConfig?.aspectRatio || 1.3333;
+                const ca = cellW / cellH;
+                if (ca > imgAspect) {
+                  extHeightPx = cellH;
+                  extWidthPx = Math.round(extHeightPx * imgAspect);
+                  offsetX = Math.round((cellW - extWidthPx) / 2);
+                } else {
+                  extWidthPx = cellW;
+                  extHeightPx = Math.round(extWidthPx / imgAspect);
+                  offsetY = Math.round((cellH - extHeightPx) / 2);
+                }
+              }
+
+              const finalOffX = baseOffsetX + offsetX;
+              const finalOffY = baseOffsetY + offsetY;
+
+              worksheet.addImage(imageId, {
+                tl: {
+                  col: (effectiveStartCol - 1) + (firstColPx > 0 ? finalOffX / firstColPx : 0),
+                  row: (effectiveStartRow - 1) + (firstRowPx > 0 ? finalOffY / firstRowPx : 0)
+                } as any,
+                ext: { width: extWidthPx, height: extHeightPx },
+                editAs: 'oneCell'
+              });
+            }
+          });
         }
       } else {
         // Text/Date/Number/Checkbox field: Fill value into the top-left cell of the named range

@@ -17,10 +17,12 @@ if (typeof window !== 'undefined') {
       const data = JSON.parse(dataJson || '{}');
       
       const filesBase64: Record<string, string> = JSON.parse(filesBase64Json || '{}');
-      const imageBuffers: Record<string, Buffer> = {};
+      const imageBuffers: Record<string, Buffer[]> = {};
       
       for (const [key, b64] of Object.entries(filesBase64)) {
-        imageBuffers[key] = Buffer.from(b64, 'base64');
+        const baseName = key.replace(/_\d+$/, '');
+        if (!imageBuffers[baseName]) imageBuffers[baseName] = [];
+        imageBuffers[baseName].push(Buffer.from(b64, 'base64'));
       }
       
       let customFields = undefined;
