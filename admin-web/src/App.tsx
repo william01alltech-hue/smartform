@@ -20,6 +20,7 @@ interface FieldConfig {
   stylePreset?: string;
   imageSizeMode?: 'fill' | 'padding10' | 'contain';
   dropdownOptions?: string;
+  maxPhotos?: number;
 }
 
 const parseRangeForUI = (rangeStr: string) => {
@@ -741,6 +742,7 @@ const Dashboard: React.FC = () => {
                       </th>
                       <th style={{ padding: '12px 8px' }}>{t('fieldType')}</th>
                       <th style={{ padding: '12px 8px' }}>相片填入模式</th>
+                      <th style={{ padding: '12px 8px' }}>張數上限</th>
                       <th style={{ padding: '12px 8px' }}>{t('resolution')}</th>
                       <th style={{ padding: '12px 8px' }}>{t('isRequired')}</th>
                       <th style={{ padding: '12px 8px' }}>輸出風格</th>
@@ -895,6 +897,20 @@ const Dashboard: React.FC = () => {
                               <option value="fill">填滿</option>
                               <option value="padding10">邊框10</option>
                               <option value="contain">原比例</option>
+                            </select>
+                          </td>
+                          <td style={{ padding: '8px 4px' }}>
+                            <select
+                              value={field.maxPhotos || 1}
+                              onChange={(e) => updateField(idx, 'maxPhotos', parseInt(e.target.value, 10))}
+                              disabled={field.type !== 'image'}
+                              style={{ padding: '6px 4px', width: '80px', borderRadius: '6px', backgroundColor: 'rgba(0,0,0,0.1)', border: '1px solid #18181b', color: '#fff', fontSize: '12px', opacity: field.type !== 'image' ? 0.5 : 1 }}
+                              title="最多可上傳幾張照片"
+                            >
+                              <option value={1}>1 張</option>
+                              <option value={2}>2 張</option>
+                              <option value={3}>3 張</option>
+                              <option value={4}>4 張</option>
                             </select>
                           </td>
                           <td style={{ padding: '8px 4px' }}>
