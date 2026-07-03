@@ -417,11 +417,33 @@ const Dashboard: React.FC = () => {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#0b0f19', color: '#e2e8f0' }}>
       {/* Header bar */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 40px', background: '#0f172a', borderBottom: '1px solid #1e293b' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#6366f1', boxShadow: '0 0 12px #6366f1' }} />
-          <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '0.5px' }}>{t('adminTitle')}</h1>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#6366f1', boxShadow: '0 0 12px #6366f1' }} />
+            <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '0.5px' }}>{t('adminTitle')}</h1>
+          </div>
+          {/* Language Switcher dropdown */}
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as Language)}
+            style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff', cursor: 'pointer', outline: 'none', width: 'fit-content', fontSize: '13px' }}
+          >
+            <option value="zh-TW">繁體中文 (zh-TW)</option>
+            <option value="en-US">English (en-US)</option>
+            <option value="zh-CN">简体中文 (zh-CN)</option>
+            <option value="vi-VN">Tiếng Việt (vi-VN)</option>
+            <option value="id-ID">Bahasa Indonesia (id-ID)</option>
+            <option value="th-TH">ไทย (th-TH)</option>
+            <option value="ja-JP">日本語 (ja-JP)</option>
+            <option value="ko-KR">한국어 (ko-KR)</option>
+            <option value="es-ES">Español (es-ES)</option>
+            <option value="fr-FR">Français (fr-FR)</option>
+            <option value="de-DE">Deutsch (de-DE)</option>
+            <option value="pt-BR">Português (pt-BR)</option>
+            <option value="ru-RU">Русский (ru-RU)</option>
+            <option value="ar-SA">العربية (ar-SA)</option>
+          </select>
         </div>
-
       {/* Top Header Controls */}
       <div style={{ margin: '0 30px', flex: 1, alignItems: 'stretch', display: 'flex', gap: '24px' }}>
         
@@ -493,27 +515,7 @@ const Dashboard: React.FC = () => {
         )}
         </section>
       </div>
-        {/* Language Switcher dropdown */}
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value as Language)}
-          style={{ padding: '8px 16px', borderRadius: '8px', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff', cursor: 'pointer', outline: 'none' }}
-        >
-          <option value="zh-TW">繁體中文 (zh-TW)</option>
-          <option value="en-US">English (en-US)</option>
-          <option value="zh-CN">简体中文 (zh-CN)</option>
-          <option value="vi-VN">Tiếng Việt (vi-VN)</option>
-          <option value="id-ID">Bahasa Indonesia (id-ID)</option>
-          <option value="th-TH">ไทย (th-TH)</option>
-          <option value="ja-JP">日本語 (ja-JP)</option>
-          <option value="ko-KR">한국어 (ko-KR)</option>
-          <option value="es-ES">Español (es-ES)</option>
-          <option value="fr-FR">Français (fr-FR)</option>
-          <option value="de-DE">Deutsch (de-DE)</option>
-          <option value="pt-BR">Português (pt-BR)</option>
-          <option value="ru-RU">Русский (ru-RU)</option>
-          <option value="ar-SA">العربية (ar-SA)</option>
-        </select>
+
       </header>
 
 
