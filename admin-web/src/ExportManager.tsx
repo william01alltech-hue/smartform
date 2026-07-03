@@ -76,6 +76,21 @@ export const ExportManager: React.FC = () => {
       });
   };
 
+  const handleDeleteFolder = async (folder: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`確定要刪除「${folder.name}」？此動作會同時刪除所有子資料夾與其中的檔案，無法復原。`)) return;
+    try {
+      await fetch(`${API_BASE}/api/export-folders/${folder.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
+      });
+      if (selectedFolder?.id === folder.id) setSelectedFolder(null);
+      fetchFolders();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // Build tree
   const rootFolders = folders.filter(f => !f.parentId);
   const getChildren = (parentId: string) => folders.filter(f => f.parentId === parentId);
@@ -91,6 +106,11 @@ export const ExportManager: React.FC = () => {
             >
               <span>📁</span>
               <span style={{ color: '#fff', fontSize: '14px', flex: 1 }}>{folder.name}</span>
+              <button
+                onClick={(e) => handleDeleteFolder(folder, e)}
+                title="刪除此資料夾"
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '14px', padding: '2px 4px', borderRadius: '4px', opacity: 0.6, lineHeight: 1 }}
+              >🗑️</button>
             </div>
             {getChildren(folder.id).length > 0 && (
               <FolderTree folderList={getChildren(folder.id)} depth={depth + 1} />

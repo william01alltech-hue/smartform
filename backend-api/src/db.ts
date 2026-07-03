@@ -193,7 +193,19 @@ class SQLiteDatabase {
     return dbInstance.prepare('SELECT * FROM exported_files WHERE id = ?').get(id) as ExportedFile | undefined;
   }
 
-  // --- 點數系統 ---
+  public deleteExportFolder(id: string): boolean {
+    // Recursively delete all child folders and their files
+    const children = dbInstance.prepare('SELECT id FROM export_folders WHERE parentId = ?').all(id) as { id: string }[];
+    for (const child of children) {
+      this.deleteExportFolder(child.id);
+    }
+    // Delete files in this folder
+    dbInstance.prepare('DELETE FROM exported_files WHERE folderId = ?').run(id);
+    // Delete the folder itself
+    dbInstance.prepare('DELETE FROM export_folders WHERE id = ?').run(id);
+    return true;
+  }
+
 
   public getValidPoints(token: string): { free: number; paid: number; total: number } {
     const info = this.getToken(token);
