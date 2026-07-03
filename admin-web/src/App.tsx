@@ -17,6 +17,7 @@ interface FieldConfig {
   required?: boolean;
   stylePreset?: string;
   imageSizeMode?: 'fill' | 'padding10' | 'contain';
+  dropdownOptions?: string;
 }
 
 const parseRangeForUI = (rangeStr: string) => {
@@ -826,6 +827,7 @@ const Dashboard: React.FC = () => {
                               style={{ padding: '6px 4px', width: '90px', borderRadius: '6px', backgroundColor: 'rgba(0,0,0,0.1)', border: '1px solid #18181b', color: '#fff', fontSize: '12px' }}
                             >
                               <option value="text">純文字</option>
+                              <option value="dropdown">下拉選單</option>
                               <option value="image">相片</option>
                               <option value="date">日期</option>
                               <option value="number">數值</option>
@@ -834,6 +836,16 @@ const Dashboard: React.FC = () => {
                               <option value="mobile">手機號碼</option>
                               <option value="tel">市內電話</option>
                             </select>
+                            {field.type === 'dropdown' && (
+                              <textarea
+                                value={field.dropdownOptions || ''}
+                                onChange={(e) => updateField(idx, 'dropdownOptions', e.target.value)}
+                                placeholder="選項1
+選項2
+選項3"
+                                style={{ marginTop: '4px', width: '80px', height: '40px', padding: '4px', borderRadius: '4px', backgroundColor: 'rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '10px', resize: 'none' }}
+                              />
+                            )}
                           </td>
                           <td style={{ padding: '8px 4px' }}>
                             <select
@@ -1044,6 +1056,7 @@ const Dashboard: React.FC = () => {
                                         {existingField.type === 'image' && '📷 '}
                                         {existingField.type === 'signature' && '✍️ '}
                                         {existingField.type === 'text' && '✏️ '}
+                                        {existingField.type === 'dropdown' && '🔽 '}
                                         {existingField.type === 'date' && '📅 '}
                                         {existingField.type === 'number' && '🔢 '}
                                         {existingField.type === 'checkbox' && '☑️ '}
@@ -1127,6 +1140,17 @@ const Dashboard: React.FC = () => {
                     {field.name.replace(/_/g, ' ')} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
                   </label>
                   
+                  {field.type === 'dropdown' && (
+                    <select
+                      disabled
+                      style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'rgba(0,0,0,0.2)', border: 'none', color: '#71717a', fontSize: '12px', appearance: 'none' }}
+                    >
+                      <option value="">請選擇...</option>
+                      {(field.dropdownOptions || '').split('\n').filter(Boolean).map((opt, i) => (
+                        <option key={i} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  )}
                   {field.type === 'text' && (
                     <input
                       type="text"
