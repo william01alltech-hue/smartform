@@ -801,7 +801,18 @@ const Dashboard: React.FC = () => {
                                 type="text"
                                 value={field.label}
                                 onChange={(e) => updateField(idx, 'label', e.target.value)}
-                                style={{ padding: '6px 8px', width: '90px', borderRadius: '6px', backgroundColor: 'rgba(0,0,0,0.1)', border: '1px solid #18181b', color: '#fff' }}
+                                onFocus={() => setPickingLabelIdx(idx)}
+                                placeholder="點圖表或手動輸入"
+                                style={{ 
+                                  padding: '6px 8px', 
+                                  width: '90px', 
+                                  borderRadius: '6px', 
+                                  backgroundColor: isPickingThis ? 'rgba(20, 184, 166, 0.15)' : 'rgba(0,0,0,0.1)', 
+                                  border: isPickingThis ? '1px solid #14b8a6' : '1px solid #18181b', 
+                                  color: '#fff',
+                                  outline: 'none',
+                                  transition: 'all 0.2s ease'
+                                }}
                               />
                               <button
                                 onClick={() => setPickingLabelIdx(isPickingThis ? null : idx)}
