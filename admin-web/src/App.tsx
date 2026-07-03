@@ -443,6 +443,16 @@ const Dashboard: React.FC = () => {
             <option value="ru-RU">Русский (ru-RU)</option>
             <option value="ar-SA">العربية (ar-SA)</option>
           </select>
+          {/* Upload Button (Left) */}
+          <div className="glass-panel" style={{ padding: '16px', minWidth: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+            <label className="btn-primary" style={{ padding: '6px 12px', cursor: 'pointer', background: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              📁 選擇 Excel 樣板 (.xlsx)
+              <input type="file" accept=".xlsx" onChange={handleFileUpload} style={{ display: 'none' }} />
+            </label>
+            <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+              {selectedFile ? `已選取: ${selectedFile.name}` : '尚未選擇檔案'}
+            </span>
+          </div>
         </div>
       {/* Top Header Controls */}
       <div style={{ margin: '0 30px', flex: 1, alignItems: 'stretch', display: 'flex', gap: '24px' }}>
@@ -455,17 +465,7 @@ const Dashboard: React.FC = () => {
           <button onClick={() => alert('此功能即將推出')} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>4. 模擬填寫端 App UI 渲染</button>
         </div>
 
-        {/* Upload Button (Left) */}
-        {/* Upload template button */}
-        <div className="glass-panel" style={{ padding: '24px', minWidth: '250px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '16px' }}>
-          <label className="btn-primary" style={{ padding: '8px 16px', cursor: 'pointer', background: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-            📁 選擇 Excel 樣板 (.xlsx)
-            <input type="file" accept=".xlsx" onChange={handleFileUpload} style={{ display: 'none' }} />
-          </label>
-          <span style={{ fontSize: '13px', color: '#94a3b8' }}>
-            {selectedFile ? `已選取: ${selectedFile.name}` : '尚未選擇檔案'}
-          </span>
-        </div>
+
 
         {/* Cloud Templates Library (Right) */}
         <section style={{ flex: 1, padding: '12px 20px', background: '#0f172a', borderRadius: '12px', border: '1px solid #1e293b', minWidth: 0 }}>
