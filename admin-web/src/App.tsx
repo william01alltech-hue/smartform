@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
-const MASTER_TOKEN = import.meta.env.VITE_MASTER_TOKEN;
+const MASTER_TOKEN = import.meta.env.VITE_MASTER_TOKEN || 'william_master_token';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import type { Language } from './context/LanguageContext';
 
