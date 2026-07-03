@@ -447,6 +447,15 @@ const Dashboard: React.FC = () => {
 
       {/* Top Header Controls */}
       <div style={{ margin: '16px 30px 0', display: 'flex', gap: '24px' }}>
+        
+        {/* Navigation Sidebar (Far Left) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '220px' }}>
+          <button onClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>1. 主副帳號授權管理</button>
+          <button onClick={() => document.getElementById('config-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>2. 具名範圍欄位對應與解析</button>
+          <button onClick={() => document.getElementById('preview-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>3. Excel 樣板表格預覽</button>
+          <button onClick={() => alert('此功能即將推出')} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>4. 模擬填寫端 App UI 渲染</button>
+        </div>
+
         {/* Upload Button (Left) */}
         {/* Upload template button */}
         <div className="glass-panel" style={{ padding: '24px', minWidth: '250px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '16px' }}>
@@ -515,7 +524,7 @@ const Dashboard: React.FC = () => {
         <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', maxHeight: `${Math.max(previewHeight + 80, 500)}px`, paddingRight: '8px' }}>
           
           {/* Master/Sub Account Settings Panel */}
-          <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div id="auth-section" className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '18px' }}>🔑</span>
               <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>主副帳號授權管理</h2>
@@ -614,7 +623,7 @@ const Dashboard: React.FC = () => {
 
 
           {/* Configuration Grid */}
-          <div className="glass-panel" style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div id="config-section" className="glass-panel" style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>具名範圍欄位對應與解析</h2>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -971,7 +980,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
         {/* Column 1 (Right): Excel visual layout preview & cell click */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div id="preview-section" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '18px' }}>📊</span>
             <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>Excel 樣板表格預覽</h2>
