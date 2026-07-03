@@ -147,7 +147,7 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates }) => {
 
               const res = await fetch(`${API_BASE}/api/templates/${clientTemplate.id}/export`, {
                 method: 'POST',
-                headers: { 'Authorization': MASTER_TOKEN },
+                headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` },
                 body: formData
               });
               
