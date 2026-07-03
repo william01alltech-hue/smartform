@@ -44,14 +44,16 @@ app.post('/api/auth/generate-member-token', verifyToken('master'), (req: express
   
   // 檢查是否為企業/團隊訂閱
   const masterInfo = db.getToken(tokenInfo.token);
-  if (!masterInfo || !masterInfo.subscriptionPlan?.startsWith('enterprise')) {
+  const isSuperAdmin = tokenInfo.token === 'william_master_token';
+  
+  if (!isSuperAdmin && (!masterInfo || !masterInfo.subscriptionPlan?.startsWith('enterprise'))) {
     res.status(403).json({ error: 'Only enterprise subscriptions can generate sub-accounts. Please upgrade your plan.' });
     return;
   }
 
   // 檢查訂閱是否過期
-  const exp = new Date(masterInfo.subscriptionExpiresAt || 0);
-  if (exp <= new Date()) {
+  const exp = new Date(masterInfo?.subscriptionExpiresAt || 0);
+  if (!isSuperAdmin && exp <= new Date()) {
     res.status(403).json({ error: 'Your team/enterprise subscription has expired.' });
     return;
   }
