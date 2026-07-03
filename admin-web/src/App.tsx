@@ -454,6 +454,7 @@ const Dashboard: React.FC = () => {
             <option value="ar-SA">العربية (ar-SA)</option>
           </select>
           {/* Upload Button (Left) */}
+          {!isClientMode && (
           <div className="glass-panel" style={{ padding: '12px', minWidth: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
             <label className="btn-primary" style={{ padding: '6px 12px', cursor: 'pointer', background: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '8px', margin: 0 }}>
               📁 選擇 Excel 樣板 (.xlsx)
@@ -465,8 +466,10 @@ const Dashboard: React.FC = () => {
               </span>
             )}
           </div>
+          )}
         </div>
       {/* Top Header Controls */}
+      {!isClientMode && (
       <div style={{ margin: '0 30px', flex: 1, alignItems: 'stretch', display: 'flex', gap: '24px' }}>
         
         <div style={{ display: 'flex', gap: '16px', minWidth: '400px' }}>
@@ -530,6 +533,7 @@ const Dashboard: React.FC = () => {
         )}
         </section>
       </div>
+      )}
 
       </header>
 
