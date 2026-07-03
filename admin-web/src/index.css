@@ -99,3 +99,31 @@ body {
 .btn-primary:active {
   transform: translateY(0);
 }
+
+/* Responsive Main Layout */
+.main-layout {
+  flex: 1;
+  padding: 24px 30px;
+  display: grid;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .main-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 16px !important;
+  }
+  
+  .glass-panel {
+    width: 100% !important;
+    overflow-x: auto;
+  }
+  
+  header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start !important;
+  }
+}

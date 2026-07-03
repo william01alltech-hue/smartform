@@ -530,7 +530,7 @@ const Dashboard: React.FC = () => {
 
 
       {/* Main dashboard content */}
-      <main style={{ flex: 1, padding: '24px 30px', display: 'grid', gridTemplateColumns: [(showAuth || showConfig) ? 'minmax(0, 1.2fr)' : '', showPreview ? 'minmax(0, 1.5fr)' : '', showAppUI ? 'minmax(0, 0.8fr)' : ''].filter(Boolean).join(' '), gap: '24px', boxSizing: 'border-box' }}>
+      <main className="main-layout" style={{ gridTemplateColumns: [(showAuth || showConfig) ? 'minmax(0, 1.2fr)' : '', showPreview ? 'minmax(0, 1.5fr)' : '', showAppUI ? 'minmax(0, 0.8fr)' : ''].filter(Boolean).join(' ') }}>
         
         {/* Column 2 (Left): File Upload & Configuration parameters mapping grid */}
         {(showAuth || showConfig) && (
