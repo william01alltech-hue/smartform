@@ -107,6 +107,10 @@ const Dashboard: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [hasUploaded, setHasUploaded] = useState(false);
   const [highlightedRangeStr, setHighlightedRangeStr] = useState<string | null>(null);
+  const [showAuth, setShowAuth] = useState(true);
+  const [showConfig, setShowConfig] = useState(true);
+  const [showPreview, setShowPreview] = useState(true);
+  const [showAppUI, setShowAppUI] = useState(true);
   
   // UX enhancements
   const [pickingLabelIdx, setPickingLabelIdx] = useState<number | null>(null);
@@ -461,12 +465,12 @@ const Dashboard: React.FC = () => {
         
         <div style={{ display: 'flex', gap: '16px', minWidth: '400px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-            <button onClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>1. 主副帳號授權管理</button>
-            <button onClick={() => document.getElementById('config-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>2. 具名範圍欄位對應與解析</button>
+            <button onClick={() => setShowAuth(!showAuth)} style={{ padding: '12px 16px', background: showAuth ? '#1e293b' : 'transparent', border: showAuth ? '1px solid #6366f1' : '1px dashed #334155', borderRadius: '8px', color: showAuth ? '#cbd5e1' : '#64748b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>1. 主副帳號授權管理</button>
+            <button onClick={() => setShowConfig(!showConfig)} style={{ padding: '12px 16px', background: showConfig ? '#1e293b' : 'transparent', border: showConfig ? '1px solid #6366f1' : '1px dashed #334155', borderRadius: '8px', color: showConfig ? '#cbd5e1' : '#64748b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>2. 具名範圍欄位對應與解析</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-            <button onClick={() => document.getElementById('preview-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>3. Excel 樣板表格預覽</button>
-            <button onClick={() => alert('此功能即將推出')} style={{ padding: '12px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#cbd5e1', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>4. 模擬填寫端 App UI 渲染</button>
+            <button onClick={() => setShowPreview(!showPreview)} style={{ padding: '12px 16px', background: showPreview ? '#1e293b' : 'transparent', border: showPreview ? '1px solid #6366f1' : '1px dashed #334155', borderRadius: '8px', color: showPreview ? '#cbd5e1' : '#64748b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>3. Excel 樣板表格預覽</button>
+            <button onClick={() => setShowAppUI(!showAppUI)} style={{ padding: '12px 16px', background: showAppUI ? '#1e293b' : 'transparent', border: showAppUI ? '1px solid #6366f1' : '1px dashed #334155', borderRadius: '8px', color: showAppUI ? '#cbd5e1' : '#64748b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s' }}>4. 模擬填寫端 App UI 渲染</button>
           </div>
         </div>
 
@@ -525,9 +529,10 @@ const Dashboard: React.FC = () => {
 
 
       {/* Main dashboard content */}
-      <main style={{ flex: 1, padding: '24px 30px', display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1.2fr) minmax(0, 0.8fr)', gap: '24px', boxSizing: 'border-box' }}>
+      <main style={{ flex: 1, padding: '24px 30px', display: 'grid', gridTemplateColumns: [showPreview ? 'minmax(0, 1.5fr)' : '', (showAuth || showConfig) ? 'minmax(0, 1.2fr)' : '', showAppUI ? 'minmax(0, 0.8fr)' : ''].filter(Boolean).join(' '), gap: '24px', boxSizing: 'border-box' }}>
         
         {/* Column 1 (Right): Excel visual layout preview & cell click */}
+        {showPreview && (
         <div id="preview-section" className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', minHeight: '580px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '18px' }}>📊</span>
@@ -727,11 +732,14 @@ const Dashboard: React.FC = () => {
             </div>
           )}
         </div>
+        )}
 
         {/* Column 2 (Left): File Upload & Configuration parameters mapping grid */}
+        {(showAuth || showConfig) && (
         <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', maxHeight: `${Math.max(previewHeight + 80, 500)}px`, paddingRight: '8px' }}>
           
           {/* Master/Sub Account Settings Panel */}
+          {showAuth && (
           <div id="auth-section" className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '18px' }}>🔑</span>
@@ -828,9 +836,11 @@ const Dashboard: React.FC = () => {
               )}
             </div>
           </div>
+          )}
 
 
           {/* Configuration Grid */}
+          {showConfig && (
           <div id="config-section" className="glass-panel" style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>具名範圍欄位對應與解析</h2>
@@ -1085,9 +1095,12 @@ const Dashboard: React.FC = () => {
               </div>
             )}
           </div>
+          )}
         </div>
+        )}
 
         {/* Right column: Simulated mobile App form UI rendering preview */}
+        {showAppUI && (
         <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>{t('previewApp')}</h2>
 
@@ -1187,6 +1200,7 @@ const Dashboard: React.FC = () => {
             )}
           </div>
         </div>
+        )}
       </main>
 
       {/* Editing Permissions Modal */}
