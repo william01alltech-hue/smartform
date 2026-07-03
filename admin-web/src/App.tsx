@@ -418,7 +418,7 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#0b0f19', color: '#e2e8f0' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'transparent', color: '#e2e8f0' }}>
       {/* Header bar */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 40px', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid #18181b' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
