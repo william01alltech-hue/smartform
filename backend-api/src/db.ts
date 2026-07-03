@@ -42,6 +42,8 @@ export interface TokenInfo {
   pointLedger?: PointTransaction[];
   lastAdDate?: string;
   dailyAdWatchCount?: number;
+  
+  allowedFolders?: string[]; // null/undefined/empty array all handled: if empty, no access. If undefined, all access (backward compatibility, but going forward new tokens might have it). Wait, the rule is "empty means no access, full check means all access". Let's say undefined means all access for backward compatibility, but in UI we treat it appropriately.
 }
 
 interface TemplateInfo {
@@ -106,11 +108,23 @@ class SQLiteDatabase {
     const all = rows.map(r => JSON.parse(r.data) as TokenInfo);
     return all.filter(t => t.masterToken === masterToken);
   }
+  
+  public getMemberTokens(masterToken: string): TokenInfo[] {
+    return this.getTokensByMaster(masterToken).filter(t => t.role === 'member');
+  }
 
   public deleteToken(token: string): boolean {
     const info = this.getToken(token);
     if (!info) return false;
     this.stmtDeleteToken.run(token);
+    return true;
+  }
+  
+  public updateTokenFolders(token: string, folders: string[] | undefined): boolean {
+    const info = this.getToken(token);
+    if (!info) return false;
+    info.allowedFolders = folders;
+    this.saveToken(info);
     return true;
   }
 
@@ -270,7 +284,17 @@ class SQLiteDatabase {
     const info = this.getToken(token);
     if (!info) return [];
     const masterToken = info.role === 'master' ? info.token : (info.masterToken || '');
-    return this.getTemplatesByMaster(masterToken);
+    let templates = this.getTemplatesByMaster(masterToken);
+    
+    // 如果是 member 且有設定 allowedFolders
+    // 注意邏輯：如果 allowedFolders 存在 (哪怕是空陣列 []), 就不讓他看不在陣列裡的表單
+    // 所以空陣列代表什麼都看不到 (完全符合需求)
+    // 如果 allowedFolders 是 undefined (以前產生的 key 或全選)，才給看全部。
+    if (info.role === 'member' && info.allowedFolders !== undefined) {
+      templates = templates.filter(t => t.folder && info.allowedFolders!.includes(t.folder));
+    }
+    
+    return templates;
   }
 
   public saveTemplate(masterToken: string, templateId: string, title: string, config: any, excelBase64: string | Buffer, folder?: string, pages?: number): TemplateInfo {
