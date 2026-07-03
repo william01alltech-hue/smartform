@@ -700,18 +700,6 @@ const Dashboard: React.FC = () => {
         {/* Column 2 (Middle): File Upload & Configuration parameters mapping grid */}
         <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', maxHeight: `${Math.max(previewHeight + 80, 500)}px`, paddingRight: '8px' }}>
           
-          {/* Upload template box */}
-          <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>{t('uploadTemplate')}</h2>
-            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '110px', border: '2px dashed #334155', borderRadius: '12px', cursor: 'pointer', transition: 'border-color 0.2s' }}>
-              <input type="file" accept=".xlsx" onChange={handleFileUpload} style={{ display: 'none' }} />
-              <span style={{ fontSize: '24px', marginBottom: '4px' }}>📁</span>
-              <span style={{ fontSize: '13px', color: '#94a3b8' }}>
-                {selectedFile ? `${selectedFile.name}` : t('dropHere')}
-              </span>
-            </label>
-          </div>
-
           {/* Master/Sub Account Settings Panel */}
           <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -808,6 +796,18 @@ const Dashboard: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Upload template box */}
+          <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#f1f5f9' }}>{t('uploadTemplate')}</h2>
+            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '110px', border: '2px dashed #334155', borderRadius: '12px', cursor: 'pointer', transition: 'border-color 0.2s' }}>
+              <input type="file" accept=".xlsx" onChange={handleFileUpload} style={{ display: 'none' }} />
+              <span style={{ fontSize: '24px', marginBottom: '4px' }}>📁</span>
+              <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+                {selectedFile ? `${selectedFile.name}` : t('dropHere')}
+              </span>
+            </label>
           </div>
 
           {/* Configuration Grid */}
