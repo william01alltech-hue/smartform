@@ -114,6 +114,12 @@ const Dashboard: React.FC = () => {
   const [showPreview, setShowPreview] = useState(true);
   const [showAppUI, setShowAppUI] = useState(true);
   const [isClientMode, setIsClientMode] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsClientMode(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // UX enhancements
   const [pickingLabelIdx, setPickingLabelIdx] = useState<number | null>(null);
@@ -427,10 +433,7 @@ const Dashboard: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#8b5cf6', boxShadow: '0 0 12px #8b5cf6' }} />
-            <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '0.5px' }}>{t('adminTitle')}</h1>
-            <button onClick={() => setIsClientMode(!isClientMode)} style={{ padding: '6px 12px', borderRadius: '8px', background: isClientMode ? '#10b981' : 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' }}>
-              {isClientMode ? '💻 切換至後台' : '📱 前台填寫模式'}
-            </button>
+            <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '0.5px' }}>{isClientMode ? '表單自動化管理' : t('adminTitle')}</h1>
           </div>
           {/* Language Switcher dropdown */}
           <select
