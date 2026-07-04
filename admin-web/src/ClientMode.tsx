@@ -5,9 +5,10 @@ const MASTER_TOKEN = import.meta.env.VITE_MASTER_TOKEN || 'william_master_token'
 
 interface ClientModeProps {
   cloudTemplates: any[];
+  token: string;
 }
 
-export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates }) => {
+export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates, token }) => {
   const [clientFolder, setClientFolder] = useState<string | null>(null);
   const [clientTemplate, setClientTemplate] = useState<any | null>(null);
   const [clientFormData, setClientFormData] = useState<Record<string, string>>({});
@@ -19,7 +20,7 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates }) => {
   const [targetFilename, setTargetFilename] = useState<string>('');
 
   React.useEffect(() => {
-    fetch(`${API_BASE}/api/export-folders`, { headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` } })
+    fetch(`${API_BASE}/api/export-folders`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) setExportFolders(data);

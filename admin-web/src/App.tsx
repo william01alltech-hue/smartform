@@ -100,6 +100,10 @@ interface VisualSheet {
   rowHeights: number[];
 }
 
+const queryParams = new URLSearchParams(window.location.search);
+const urlToken = queryParams.get('token');
+const activeToken = urlToken || MASTER_TOKEN;
+
 const Dashboard: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
   const [fields, setFields] = useState<FieldConfig[]>([]);
@@ -117,7 +121,7 @@ const Dashboard: React.FC = () => {
   const [showPreview, setShowPreview] = useState(true);
   const [showAppUI, setShowAppUI] = useState(true);
   const [showExportManager, setShowExportManager] = useState(false);
-  const [isClientMode, setIsClientMode] = useState(window.innerWidth <= 768);
+  const [isClientMode, setIsClientMode] = useState(urlToken ? urlToken.startsWith('member_') : window.innerWidth <= 768);
 
   useEffect(() => {
     const handleResize = () => setIsClientMode(window.innerWidth <= 768);
@@ -152,7 +156,7 @@ const Dashboard: React.FC = () => {
 
   const fetchTemplates = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/templates?token=${MASTER_TOKEN}`);
+      const response = await fetch(`${API_BASE}/api/templates?token=${activeToken}`);
       const data = await response.json();
       if (Array.isArray(data)) {
         setCloudTemplates(data);
@@ -564,7 +568,7 @@ const Dashboard: React.FC = () => {
 
       {/* Main dashboard content */}
       {isClientMode ? (
-        <ClientMode cloudTemplates={cloudTemplates} />
+        <ClientMode cloudTemplates={cloudTemplates} token={activeToken} />
       ) : (
       <main className="main-layout" style={{ gridTemplateColumns: [(showAuth || showConfig) ? 'minmax(0, 1.2fr)' : '', showPreview ? 'minmax(0, 1.5fr)' : '', showAppUI ? 'minmax(0, 0.8fr)' : ''].filter(Boolean).join(' ') }}>
         
@@ -640,7 +644,17 @@ const Dashboard: React.FC = () => {
                           }}
                           style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', fontSize: '11px', cursor: 'pointer' }}
                         >
-                          複製
+                          複製金鑰
+                        </button>
+                        <button
+                          onClick={() => {
+                            const link = `${window.location.origin}/?token=${t.token}`;
+                            navigator.clipboard.writeText(link);
+                            alert(`成員連結已複製！\n${link}`);
+                          }}
+                          style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#10b981', border: 'none', color: '#fff', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                        >
+                          複製專屬連結
                         </button>
                         <button
                           onClick={() => {
