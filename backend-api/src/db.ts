@@ -1,41 +1,13 @@
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 import path from 'path';
 
-const DB_FILE = process.env.SQLITE_DB_PATH || path.join(__dirname, '..', 'app_data.sqlite');
-const dbInstance = new Database(DB_FILE);
+const url = process.env.TURSO_DATABASE_URL || `file:${path.join(__dirname, '..', 'app_data.sqlite')}`;
+const authToken = process.env.TURSO_AUTH_TOKEN;
 
-// Initialize tables
-dbInstance.pragma('journal_mode = WAL'); // Better concurrency
-dbInstance.exec(`
-  CREATE TABLE IF NOT EXISTS tokens (
-    token TEXT PRIMARY KEY,
-    data TEXT NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS export_folders (
-    id TEXT PRIMARY KEY,
-    masterToken TEXT NOT NULL,
-    name TEXT NOT NULL,
-    parentId TEXT,
-    createdAt TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS exported_files (
-    id TEXT PRIMARY KEY,
-    masterToken TEXT NOT NULL,
-    folderId TEXT NOT NULL,
-    filename TEXT NOT NULL,
-    format TEXT NOT NULL,
-    dataBase64 TEXT NOT NULL,
-    createdAt TEXT NOT NULL
-  );
-
-  
-  CREATE TABLE IF NOT EXISTS templates (
-    id TEXT PRIMARY KEY,
-    data TEXT NOT NULL
-  );
-`);
-
+const client = createClient({
+  url,
+  authToken
+});
 
 export interface ExportFolder {
   id: string;
@@ -80,7 +52,7 @@ export interface TokenInfo {
   lastAdDate?: string;
   dailyAdWatchCount?: number;
   
-  allowedFolders?: string[]; // null/undefined/empty array all handled: if empty, no access. If undefined, all access (backward compatibility, but going forward new tokens might have it). Wait, the rule is "empty means no access, full check means all access". Let's say undefined means all access for backward compatibility, but in UI we treat it appropriately.
+  allowedFolders?: string[];
   memberId?: string;
   memberName?: string;
 }
@@ -97,36 +69,73 @@ interface TemplateInfo {
 }
 
 class SQLiteDatabase {
-  private stmtGetToken = dbInstance.prepare('SELECT data FROM tokens WHERE token = ?');
-  private stmtInsertToken = dbInstance.prepare('INSERT OR REPLACE INTO tokens (token, data) VALUES (?, ?)');
-  private stmtDeleteToken = dbInstance.prepare('DELETE FROM tokens WHERE token = ?');
-  private stmtGetAllTokens = dbInstance.prepare('SELECT data FROM tokens');
-
-  private stmtGetTemplate = dbInstance.prepare('SELECT data FROM templates WHERE id = ?');
-  private stmtInsertTemplate = dbInstance.prepare('INSERT OR REPLACE INTO templates (id, data) VALUES (?, ?)');
-  private stmtDeleteTemplate = dbInstance.prepare('DELETE FROM templates WHERE id = ?');
-  private stmtGetAllTemplates = dbInstance.prepare('SELECT data FROM templates');
-
   constructor() {
+    this.init().catch(err => {
+      console.error("Database initialization failed", err);
+    });
+  }
+
+  // --- Initialization ---
+  public async init() {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS tokens (
+        token TEXT PRIMARY KEY,
+        data TEXT NOT NULL
+      );
+    `);
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS export_folders (
+        id TEXT PRIMARY KEY,
+        masterToken TEXT NOT NULL,
+        name TEXT NOT NULL,
+        parentId TEXT,
+        createdAt TEXT NOT NULL
+      );
+    `);
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS exported_files (
+        id TEXT PRIMARY KEY,
+        masterToken TEXT NOT NULL,
+        folderId TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        format TEXT NOT NULL,
+        dataBase64 TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      );
+    `);
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS templates (
+        id TEXT PRIMARY KEY,
+        data TEXT NOT NULL
+      );
+    `);
+
     // Ensure default master token
-    if (!this.getToken('william_master_token')) {
-      this.createToken('william_master_token', 'master');
+    const masterToken = await this.getToken('william_master_token');
+    if (!masterToken) {
+      await this.createToken('william_master_token', 'master');
     }
   }
 
   // --- Tokens ---
 
-  public getToken(token: string): TokenInfo | undefined {
-    const row = this.stmtGetToken.get(token) as { data: string } | undefined;
-    if (!row) return undefined;
-    return JSON.parse(row.data);
+  public async getToken(token: string): Promise<TokenInfo | undefined> {
+    const res = await client.execute({
+      sql: 'SELECT data FROM tokens WHERE token = ?',
+      args: [token]
+    });
+    if (res.rows.length === 0) return undefined;
+    return JSON.parse(res.rows[0].data as string);
   }
 
-  private saveToken(info: TokenInfo) {
-    this.stmtInsertToken.run(info.token, JSON.stringify(info));
+  private async saveToken(info: TokenInfo): Promise<void> {
+    await client.execute({
+      sql: 'INSERT OR REPLACE INTO tokens (token, data) VALUES (?, ?)',
+      args: [info.token, JSON.stringify(info)]
+    });
   }
 
-  public createToken(token: string, role: 'master' | 'member', masterToken?: string): TokenInfo {
+  public async createToken(token: string, role: 'master' | 'member', masterToken?: string): Promise<TokenInfo> {
     const info: TokenInfo = {
       token,
       role,
@@ -138,93 +147,146 @@ class SQLiteDatabase {
       trialExpiresAt: role === 'master' ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() : undefined,
       pointLedger: []
     };
-    this.saveToken(info);
+    await this.saveToken(info);
     return info;
   }
 
-  public getTokensByMaster(masterToken: string): TokenInfo[] {
-    const rows = this.stmtGetAllTokens.all() as { data: string }[];
-    const all = rows.map(r => JSON.parse(r.data) as TokenInfo);
+  public async getTokensByMaster(masterToken: string): Promise<TokenInfo[]> {
+    const res = await client.execute('SELECT data FROM tokens');
+    const all = res.rows.map(r => JSON.parse(r.data as string) as TokenInfo);
     return all.filter(t => t.masterToken === masterToken);
   }
   
-  public getMemberTokens(masterToken: string): TokenInfo[] {
-    return this.getTokensByMaster(masterToken).filter(t => t.role === 'member');
+  public async getMemberTokens(masterToken: string): Promise<TokenInfo[]> {
+    const all = await this.getTokensByMaster(masterToken);
+    return all.filter(t => t.role === 'member');
   }
 
-  public deleteToken(token: string): boolean {
-    const info = this.getToken(token);
+  public async deleteToken(token: string): Promise<boolean> {
+    const info = await this.getToken(token);
     if (!info) return false;
-    this.stmtDeleteToken.run(token);
+    await client.execute({
+      sql: 'DELETE FROM tokens WHERE token = ?',
+      args: [token]
+    });
     return true;
   }
   
-  public updateTokenFolders(token: string, folders: string[] | undefined): boolean {
-    const info = this.getToken(token);
+  public async updateTokenFolders(token: string, folders: string[] | undefined): Promise<boolean> {
+    const info = await this.getToken(token);
     if (!info) return false;
     info.allowedFolders = folders;
-    this.saveToken(info);
+    await this.saveToken(info);
     return true;
   }
 
-  public updateMemberMetadata(token: string, memberId: string | undefined, memberName: string | undefined): boolean {
-    const info = this.getToken(token);
+  public async updateMemberMetadata(token: string, memberId: string | undefined, memberName: string | undefined): Promise<boolean> {
+    const info = await this.getToken(token);
     if (!info) return false;
     info.memberId = memberId;
     info.memberName = memberName;
-    this.saveToken(info);
+    await this.saveToken(info);
     return true;
   }
 
 
   // --- Export Folders & Files ---
 
-  public createExportFolder(id: string, masterToken: string, name: string, parentId: string | null): ExportFolder {
+  public async createExportFolder(id: string, masterToken: string, name: string, parentId: string | null): Promise<ExportFolder> {
     const folder: ExportFolder = { id, masterToken, name, parentId, createdAt: new Date().toISOString() };
-    dbInstance.prepare('INSERT INTO export_folders (id, masterToken, name, parentId, createdAt) VALUES (?, ?, ?, ?, ?)').run(id, masterToken, name, parentId, folder.createdAt);
+    await client.execute({
+      sql: 'INSERT INTO export_folders (id, masterToken, name, parentId, createdAt) VALUES (?, ?, ?, ?, ?)',
+      args: [id, masterToken, name, parentId, folder.createdAt]
+    });
     return folder;
   }
 
-  public getExportFolders(masterToken: string): ExportFolder[] {
-    return dbInstance.prepare('SELECT * FROM export_folders WHERE masterToken = ? ORDER BY createdAt ASC').all(masterToken) as ExportFolder[];
+  public async getExportFolders(masterToken: string): Promise<ExportFolder[]> {
+    const res = await client.execute({
+      sql: 'SELECT id, masterToken, name, parentId, createdAt FROM export_folders WHERE masterToken = ? ORDER BY createdAt ASC',
+      args: [masterToken]
+    });
+    return res.rows.map(r => ({
+      id: r.id as string,
+      masterToken: r.masterToken as string,
+      name: r.name as string,
+      parentId: r.parentId as string | null,
+      createdAt: r.createdAt as string
+    }));
   }
 
-  public saveExportedFile(id: string, masterToken: string, folderId: string, filename: string, format: string, dataBase64: string): ExportedFile {
+  public async saveExportedFile(id: string, masterToken: string, folderId: string, filename: string, format: string, dataBase64: string): Promise<ExportedFile> {
     const file: ExportedFile = { id, masterToken, folderId, filename, format, dataBase64, createdAt: new Date().toISOString() };
-    dbInstance.prepare('INSERT INTO exported_files (id, masterToken, folderId, filename, format, dataBase64, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, masterToken, folderId, filename, format, dataBase64, file.createdAt);
+    await client.execute({
+      sql: 'INSERT INTO exported_files (id, masterToken, folderId, filename, format, dataBase64, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      args: [id, masterToken, folderId, filename, format, dataBase64, file.createdAt]
+    });
     return file;
   }
 
-  public getExportedFiles(folderId: string): Omit<ExportedFile, 'dataBase64'>[] {
-    // Return without base64 data to save bandwidth
-    return dbInstance.prepare('SELECT id, masterToken, folderId, filename, format, createdAt FROM exported_files WHERE folderId = ? ORDER BY createdAt DESC').all(folderId) as any[];
+  public async getExportedFiles(folderId: string): Promise<Omit<ExportedFile, 'dataBase64'>[]> {
+    const res = await client.execute({
+      sql: 'SELECT id, masterToken, folderId, filename, format, createdAt FROM exported_files WHERE folderId = ? ORDER BY createdAt DESC',
+      args: [folderId]
+    });
+    return res.rows.map(r => ({
+      id: r.id as string,
+      masterToken: r.masterToken as string,
+      folderId: r.folderId as string,
+      filename: r.filename as string,
+      format: r.format as string,
+      createdAt: r.createdAt as string
+    }));
   }
 
-  public getExportedFileById(id: string): ExportedFile | undefined {
-    return dbInstance.prepare('SELECT * FROM exported_files WHERE id = ?').get(id) as ExportedFile | undefined;
+  public async getExportedFileById(id: string): Promise<ExportedFile | undefined> {
+    const res = await client.execute({
+      sql: 'SELECT * FROM exported_files WHERE id = ?',
+      args: [id]
+    });
+    if (res.rows.length === 0) return undefined;
+    const r = res.rows[0];
+    return {
+      id: r.id as string,
+      masterToken: r.masterToken as string,
+      folderId: r.folderId as string,
+      filename: r.filename as string,
+      format: r.format as string,
+      dataBase64: r.dataBase64 as string,
+      createdAt: r.createdAt as string
+    };
   }
 
-  public deleteExportedFile(id: string): boolean {
-    dbInstance.prepare('DELETE FROM exported_files WHERE id = ?').run(id);
+  public async deleteExportedFile(id: string): Promise<boolean> {
+    await client.execute({
+      sql: 'DELETE FROM exported_files WHERE id = ?',
+      args: [id]
+    });
     return true;
   }
 
-  public deleteExportFolder(id: string): boolean {
-    // Recursively delete all child folders and their files
-    const children = dbInstance.prepare('SELECT id FROM export_folders WHERE parentId = ?').all(id) as { id: string }[];
-    for (const child of children) {
-      this.deleteExportFolder(child.id);
+  public async deleteExportFolder(id: string): Promise<boolean> {
+    const res = await client.execute({
+      sql: 'SELECT id FROM export_folders WHERE parentId = ?',
+      args: [id]
+    });
+    for (const child of res.rows) {
+      await this.deleteExportFolder(child.id as string);
     }
-    // Delete files in this folder
-    dbInstance.prepare('DELETE FROM exported_files WHERE folderId = ?').run(id);
-    // Delete the folder itself
-    dbInstance.prepare('DELETE FROM export_folders WHERE id = ?').run(id);
+    await client.execute({
+      sql: 'DELETE FROM exported_files WHERE folderId = ?',
+      args: [id]
+    });
+    await client.execute({
+      sql: 'DELETE FROM export_folders WHERE id = ?',
+      args: [id]
+    });
     return true;
   }
 
 
-  public getValidPoints(token: string): { free: number; paid: number; total: number } {
-    const info = this.getToken(token);
+  public async getValidPoints(token: string): Promise<{ free: number; paid: number; total: number }> {
+    const info = await this.getToken(token);
     if (!info || !info.pointLedger) return { free: 0, paid: 0, total: 0 };
 
     const now = new Date();
@@ -238,17 +300,17 @@ class SQLiteDatabase {
       else paid += p.amount;
     });
 
-    this.saveToken(info);
+    await this.saveToken(info);
     return { free, paid, total: free + paid };
   }
 
-  public rewardPoints(token: string, amount: number): boolean {
-    const info = this.getToken(token);
+  public async rewardPoints(token: string, amount: number): Promise<boolean> {
+    const info = await this.getToken(token);
     if (!info) return false;
 
     if (!info.pointLedger) info.pointLedger = [];
     
-    const pts = this.getValidPoints(token);
+    const pts = await this.getValidPoints(token);
     if (pts.free >= 300) return false;
 
     const now = new Date();
@@ -262,12 +324,12 @@ class SQLiteDatabase {
       expiresAt: expiresAt.toISOString()
     });
 
-    this.saveToken(info);
+    await this.saveToken(info);
     return true;
   }
 
-  public purchasePoints(token: string, amount: number): boolean {
-    const info = this.getToken(token);
+  public async purchasePoints(token: string, amount: number): Promise<boolean> {
+    const info = await this.getToken(token);
     if (!info) return false;
 
     if (!info.pointLedger) info.pointLedger = [];
@@ -283,15 +345,15 @@ class SQLiteDatabase {
       expiresAt: expiresAt.toISOString()
     });
 
-    this.saveToken(info);
+    await this.saveToken(info);
     return true;
   }
 
-  public consumePoints(token: string, amount: number): boolean {
-    const info = this.getToken(token);
+  public async consumePoints(token: string, amount: number): Promise<boolean> {
+    const info = await this.getToken(token);
     if (!info || !info.pointLedger) return false;
 
-    const pts = this.getValidPoints(token);
+    const pts = await this.getValidPoints(token);
     if (pts.total < amount) return false;
 
     const now = new Date();
@@ -299,7 +361,6 @@ class SQLiteDatabase {
 
     info.pointLedger = info.pointLedger.filter(p => new Date(p.expiresAt) > now);
     
-    // Sort: free first, then paid. Inside type, sort by expiration (earliest first)
     info.pointLedger.sort((a, b) => {
       if (a.type !== b.type) {
         return a.type === 'free' ? -1 : 1;
@@ -319,12 +380,12 @@ class SQLiteDatabase {
     }
 
     info.pointLedger = info.pointLedger.filter(p => p.amount > 0);
-    this.saveToken(info);
+    await this.saveToken(info);
     return true;
   }
 
-  public updateAdWatchCount(token: string): { success: boolean; rewardPoints: number; limitReached: boolean } {
-    const info = this.getToken(token);
+  public async updateAdWatchCount(token: string): Promise<{ success: boolean; rewardPoints: number; limitReached: boolean }> {
+    const info = await this.getToken(token);
     if (!info) return { success: false, rewardPoints: 0, limitReached: false };
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -340,14 +401,12 @@ class SQLiteDatabase {
     }
 
     const reward = currentCount === 0 ? 3 : 1;
-    // Note: since we refetched info, we can just call rewardPoints which will fetch it again and save it.
-    // We then re-fetch it here to update the watch count!
-    const added = this.rewardPoints(token, reward);
+    const added = await this.rewardPoints(token, reward);
 
     if (added) {
-      const updatedInfo = this.getToken(token)!;
+      const updatedInfo = (await this.getToken(token))!;
       updatedInfo.dailyAdWatchCount = currentCount + 1;
-      this.saveToken(updatedInfo);
+      await this.saveToken(updatedInfo);
       return { success: true, rewardPoints: reward, limitReached: updatedInfo.dailyAdWatchCount >= 10 };
     } else {
       return { success: false, rewardPoints: 0, limitReached: false };
@@ -356,14 +415,13 @@ class SQLiteDatabase {
 
   // --- Templates & Capacity ---
 
-  public getCapacityLimit(token: string): number {
-    const info = this.getToken(token);
+  public async getCapacityLimit(token: string): Promise<number> {
+    const info = await this.getToken(token);
     if (!info) return 3;
     const masterToken = info.role === 'master' ? info.token : (info.masterToken || '');
-    const masterInfo = this.getToken(masterToken);
+    const masterInfo = await this.getToken(masterToken);
     if (!masterInfo) return 3;
 
-    // Master account and william_master_token has unlimited capacity
     if (masterInfo.role === 'master' || masterToken === 'william_master_token') {
       return 9999;
     }
@@ -378,16 +436,12 @@ class SQLiteDatabase {
     return base + (masterInfo.extraTemplateCapacity || 0);
   }
 
-  public getTemplatesForToken(token: string): TemplateInfo[] {
-    const info = this.getToken(token);
+  public async getTemplatesForToken(token: string): Promise<TemplateInfo[]> {
+    const info = await this.getToken(token);
     if (!info) return [];
     const masterToken = info.role === 'master' ? info.token : (info.masterToken || '');
-    let templates = this.getTemplatesByMaster(masterToken);
+    let templates = await this.getTemplatesByMaster(masterToken);
     
-    // 如果是 member 且有設定 allowedFolders
-    // 注意邏輯：如果 allowedFolders 存在 (哪怕是空陣列 []), 就不讓他看不在陣列裡的表單
-    // 所以空陣列代表什麼都看不到 (完全符合需求)
-    // 如果 allowedFolders 是 undefined (以前產生的 key 或全選)，才給看全部。
     if (info.role === 'member' && info.allowedFolders !== undefined) {
       templates = templates.filter(t => t.folder && info.allowedFolders!.includes(t.folder));
     }
@@ -395,8 +449,8 @@ class SQLiteDatabase {
     return templates;
   }
 
-  public saveTemplate(masterToken: string, templateId: string, title: string, config: any, excelBase64: string | Buffer, folder?: string, pages?: number): TemplateInfo {
-    const existing = this.getTemplate(templateId);
+  public async saveTemplate(masterToken: string, templateId: string, title: string, config: any, excelBase64: string | Buffer, folder?: string, pages?: number): Promise<TemplateInfo> {
+    const existing = await this.getTemplate(templateId);
     const base64Str = Buffer.isBuffer(excelBase64) ? excelBase64.toString('base64') : excelBase64;
     
     const tmpl: TemplateInfo = existing ? {
@@ -413,43 +467,58 @@ class SQLiteDatabase {
       pages: pages ?? 1
     };
     
-    this.stmtInsertTemplate.run(tmpl.id, JSON.stringify(tmpl));
+    await client.execute({
+      sql: 'INSERT OR REPLACE INTO templates (id, data) VALUES (?, ?)',
+      args: [tmpl.id, JSON.stringify(tmpl)]
+    });
     return tmpl;
   }
 
-  public getTemplatesByMaster(masterToken: string): TemplateInfo[] {
-    const rows = this.stmtGetAllTemplates.all() as { data: string }[];
-    const all = rows.map(r => JSON.parse(r.data) as TemplateInfo);
+  public async getTemplatesByMaster(masterToken: string): Promise<TemplateInfo[]> {
+    const res = await client.execute('SELECT data FROM templates');
+    const all = res.rows.map(r => JSON.parse(r.data as string) as TemplateInfo);
     return all.filter(t => t.masterToken === masterToken);
   }
 
-  public getTemplate(templateId: string): TemplateInfo | undefined {
-    const row = this.stmtGetTemplate.get(templateId) as { data: string } | undefined;
-    if (!row) return undefined;
-    return JSON.parse(row.data);
+  public async getTemplate(templateId: string): Promise<TemplateInfo | undefined> {
+    const res = await client.execute({
+      sql: 'SELECT data FROM templates WHERE id = ?',
+      args: [templateId]
+    });
+    if (res.rows.length === 0) return undefined;
+    return JSON.parse(res.rows[0].data as string);
   }
 
-  public deleteTemplate(templateId: string): boolean {
-    const existing = this.getTemplate(templateId);
+  public async deleteTemplate(templateId: string): Promise<boolean> {
+    const existing = await this.getTemplate(templateId);
     if (!existing) return false;
-    this.stmtDeleteTemplate.run(templateId);
+    await client.execute({
+      sql: 'DELETE FROM templates WHERE id = ?',
+      args: [templateId]
+    });
     return true;
   }
 
-  public updateTemplateFolder(templateId: string, folder: string | undefined): boolean {
-    const tmpl = this.getTemplate(templateId);
+  public async updateTemplateFolder(templateId: string, folder: string | undefined): Promise<boolean> {
+    const tmpl = await this.getTemplate(templateId);
     if (!tmpl) return false;
     tmpl.folder = folder;
     tmpl.updatedAt = new Date().toISOString();
-    this.stmtInsertTemplate.run(tmpl.id, JSON.stringify(tmpl));
+    await client.execute({
+      sql: 'INSERT OR REPLACE INTO templates (id, data) VALUES (?, ?)',
+      args: [tmpl.id, JSON.stringify(tmpl)]
+    });
     return true;
   }
 
-  public updateTemplate(templateId: string, updates: Partial<TemplateInfo>): TemplateInfo | null {
-    const tmpl = this.getTemplate(templateId);
+  public async updateTemplate(templateId: string, updates: Partial<TemplateInfo>): Promise<TemplateInfo | null> {
+    const tmpl = await this.getTemplate(templateId);
     if (!tmpl) return null;
     const newTmpl = { ...tmpl, ...updates, updatedAt: new Date().toISOString() };
-    this.stmtInsertTemplate.run(newTmpl.id, JSON.stringify(newTmpl));
+    await client.execute({
+      sql: 'INSERT OR REPLACE INTO templates (id, data) VALUES (?, ?)',
+      args: [newTmpl.id, JSON.stringify(newTmpl)]
+    });
     return newTmpl;
   }
 }
