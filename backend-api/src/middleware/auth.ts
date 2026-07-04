@@ -6,12 +6,12 @@ import { db } from '../db';
  * 若傳入 requiredRole，僅在 token 具備該角色時通過，否則回傳 403。
  */
 export function verifyToken(requiredRole?: 'master' | 'member') {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     const token = (req.headers.authorization || req.body.token) as string | undefined;
     if (!token) {
       return res.status(401).json({ error: 'Token required' });
     }
-    const tokenInfo = db.getToken(token);
+    const tokenInfo = await db.getToken(token);
     if (!tokenInfo) {
       return res.status(404).json({ error: 'Invalid token' });
     }

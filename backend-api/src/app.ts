@@ -39,11 +39,11 @@ app.post('/api/auth/verify-token', verifyToken(), (req: express.Request, res: ex
 });
 
 // 2. Generate a member (sub-account) token under a master token
-app.post('/api/auth/generate-member-token', verifyToken('master'), (req: express.Request, res: express.Response) => {
+app.post('/api/auth/generate-member-token', verifyToken('master'), async (req: express.Request, res: express.Response) => {
   const tokenInfo = (req as any).tokenInfo;
   
   // 檢查是否為企業/團隊訂閱
-  const masterInfo = db.getToken(tokenInfo.token);
+  const masterInfo = await db.getToken(tokenInfo.token);
   const isSuperAdmin = tokenInfo.token === 'william_master_token';
   
   if (!isSuperAdmin && (!masterInfo || !masterInfo.subscriptionPlan?.startsWith('enterprise'))) {
@@ -62,10 +62,10 @@ app.post('/api/auth/generate-member-token', verifyToken('master'), (req: express
 
   // Generate new member token
   const memberToken = `member_${uuidv4().substring(0, 8)}`;
-  const tokenInfoObj = db.createToken(memberToken, 'member', tokenInfo.token);
+  const tokenInfoObj = await db.createToken(memberToken, 'member', tokenInfo.token);
   
   if (memberId || memberName) {
-    db.updateMemberMetadata(memberToken, memberId || '', memberName || '');
+    await db.updateMemberMetadata(memberToken, memberId || '', memberName || '');
   }
 
   res.json({
@@ -78,9 +78,9 @@ app.post('/api/auth/generate-member-token', verifyToken('master'), (req: express
 });
 
 // 2.1 Get all member tokens for a master token
-app.get('/api/auth/member-tokens', verifyToken('master'), (req: express.Request, res: express.Response) => {
+app.get('/api/auth/member-tokens', verifyToken('master'), async (req: express.Request, res: express.Response) => {
   const tokenInfo = (req as any).tokenInfo;
-  const members = db.getMemberTokens(tokenInfo.token);
+  const members = await db.getMemberTokens(tokenInfo.token);
   res.json({
     success: true,
     members: members.map(m => ({
@@ -93,12 +93,12 @@ app.get('/api/auth/member-tokens', verifyToken('master'), (req: express.Request,
 });
 
 // 2.2 Update member token folders
-app.put('/api/auth/member-tokens/:token', verifyToken('master'), (req: express.Request, res: express.Response) => {
+app.put('/api/auth/member-tokens/:token', verifyToken('master'), async (req: express.Request, res: express.Response) => {
   const tokenInfo = (req as any).tokenInfo;
   const memberToken = req.params.token;
   
   // Verify that this member token belongs to the master
-  const memberInfo = db.getToken(memberToken);
+  const memberInfo = await db.getToken(memberToken);
   if (!memberInfo || memberInfo.masterToken !== tokenInfo.token) {
     res.status(404).json({ error: 'Member token not found or unauthorized' });
     return;
@@ -112,15 +112,15 @@ app.put('/api/auth/member-tokens/:token', verifyToken('master'), (req: express.R
   
   let success = true;
   if (allowedFolders !== undefined) {
-    success = db.updateTokenFolders(memberToken, foldersToSave);
+    success = await db.updateTokenFolders(memberToken, foldersToSave);
   }
   
   if (success && (memberId !== undefined || memberName !== undefined)) {
     // Keep existing metadata if not explicitly provided
-    const currentInfo = db.getToken(memberToken);
+    const currentInfo = await db.getToken(memberToken);
     const newId = memberId !== undefined ? memberId : currentInfo?.memberId;
     const newName = memberName !== undefined ? memberName : currentInfo?.memberName;
-    success = db.updateMemberMetadata(memberToken, newId, newName);
+    success = await db.updateMemberMetadata(memberToken, newId, newName);
   }
   
   if (success) {
@@ -131,18 +131,18 @@ app.put('/api/auth/member-tokens/:token', verifyToken('master'), (req: express.R
 });
 
 // 2.3 Delete member token
-app.delete('/api/auth/member-tokens/:token', verifyToken('master'), (req: express.Request, res: express.Response) => {
+app.delete('/api/auth/member-tokens/:token', verifyToken('master'), async (req: express.Request, res: express.Response) => {
   const tokenInfo = (req as any).tokenInfo;
   const memberToken = req.params.token;
   
   // Verify that this member token belongs to the master
-  const memberInfo = db.getToken(memberToken);
+  const memberInfo = await db.getToken(memberToken);
   if (!memberInfo || memberInfo.masterToken !== tokenInfo.token) {
     res.status(404).json({ error: 'Member token not found or unauthorized' });
     return;
   }
 
-  const success = db.deleteToken(memberToken);
+  const success = await db.deleteToken(memberToken);
   if (success) {
     res.json({ success: true });
   } else {
@@ -153,12 +153,12 @@ app.delete('/api/auth/member-tokens/:token', verifyToken('master'), (req: expres
 
 // --- Points & Economy Routing ---
 
-app.get('/api/points/status', verifyToken(), (req: express.Request, res: express.Response) => {
+app.get('/api/points/status', verifyToken(), async (req: express.Request, res: express.Response) => {
   const tokenInfo = (req as any).tokenInfo;
-  const pts = db.getValidPoints(tokenInfo.token);
+  const pts = await db.getValidPoints(tokenInfo.token);
   
   // Refresh tokenInfo to get latest ad watch count
-  const updatedToken = db.getToken(tokenInfo.token);
+  const updatedToken = await db.getToken(tokenInfo.token);
   
   res.json({
     success: true,
@@ -168,9 +168,9 @@ app.get('/api/points/status', verifyToken(), (req: express.Request, res: express
   });
 });
 
-app.get('/api/points/ledger', verifyToken(), (req: express.Request, res: express.Response) => {
+app.get('/api/points/ledger', verifyToken(), async (req: express.Request, res: express.Response) => {
   const tokenInfo = (req as any).tokenInfo;
-  const updatedToken = db.getToken(tokenInfo.token);
+  const updatedToken = await db.getToken(tokenInfo.token);
   
   if (!updatedToken) {
     res.status(404).json({ success: false, error: 'Token not found' });
@@ -189,9 +189,9 @@ app.get('/api/points/ledger', verifyToken(), (req: express.Request, res: express
   });
 });
 
-app.post('/api/points/reward', verifyToken(), (req: express.Request, res: express.Response) => {
+app.post('/api/points/reward', verifyToken(), async (req: express.Request, res: express.Response) => {
   const tokenInfo = (req as any).tokenInfo;
-  const result = db.updateAdWatchCount(tokenInfo.token);
+  const result = await db.updateAdWatchCount(tokenInfo.token);
   
   if (result.success) {
     res.json({ success: true, rewardPoints: result.rewardPoints });
@@ -203,7 +203,7 @@ app.post('/api/points/reward', verifyToken(), (req: express.Request, res: expres
   }
 });
 
-app.post('/api/points/purchase', verifyToken(), (req: express.Request, res: express.Response) => {
+app.post('/api/points/purchase', verifyToken(), async (req: express.Request, res: express.Response) => {
   const tokenInfo = (req as any).tokenInfo;
   const schema = z.object({ amount: z.number().int().positive() });
   const parsed = schema.safeParse(req.body);
@@ -212,11 +212,11 @@ app.post('/api/points/purchase', verifyToken(), (req: express.Request, res: expr
     return;
   }
   
-  const success = db.purchasePoints(tokenInfo.token, parsed.data.amount);
+  const success = await db.purchasePoints(tokenInfo.token, parsed.data.amount);
   res.json({ success });
 });
 
-app.post('/api/points/consume', verifyToken(), (req: express.Request, res: express.Response) => {
+app.post('/api/points/consume', verifyToken(), async (req: express.Request, res: express.Response) => {
   const tokenInfo = (req as any).tokenInfo;
   const schema = z.object({ amount: z.number().int().positive() });
   const parsed = schema.safeParse(req.body);
@@ -225,7 +225,7 @@ app.post('/api/points/consume', verifyToken(), (req: express.Request, res: expre
     return;
   }
   
-  const success = db.consumePoints(tokenInfo.token, parsed.data.amount);
+  const success = await db.consumePoints(tokenInfo.token, parsed.data.amount);
   if (success) {
     res.json({ success: true });
   } else {
@@ -255,8 +255,9 @@ app.post(
       const tokenInfo = (req as any).tokenInfo;
 
       // Check capacity limit
-      const limit = db.getCapacityLimit(tokenInfo.token);
-      const currentCount = db.getTemplatesForToken(tokenInfo.token).length;
+      const limit = await db.getCapacityLimit(tokenInfo.token);
+      const templatesForToken = await db.getTemplatesForToken(tokenInfo.token);
+      const currentCount = templatesForToken.length;
       
       // If this is an existing template update, we don't count it as a new one for capacity check
       // Wait, /save currently always creates a new template ID. Let's just check if they are at limit.
@@ -281,7 +282,7 @@ app.post(
       const parsedPages = pages ? parseInt(pages, 10) : 1;
 
       const templateId = uuidv4();
-      const saved = db.saveTemplate(
+      const saved = await db.saveTemplate(
         tokenInfo.token,
         templateId,
         title || '未命名範本',
@@ -304,14 +305,14 @@ app.post(
 );
 
 // 4. List all active templates accessible by the user's token (master or member)
-app.get('/api/templates', (req: express.Request, res: express.Response) => {
+app.get('/api/templates', async (req: express.Request, res: express.Response) => {
   const token = req.query.token as string;
   if (!token) {
     res.status(400).json({ error: 'Token is required' });
     return;
   }
 
-  const templates = db.getTemplatesForToken(token);
+  const templates = await db.getTemplatesForToken(token);
   // Map templates to return without base64 binary to keep response light
   const list = templates.map(t => ({
     id: t.id,
@@ -326,7 +327,7 @@ app.get('/api/templates', (req: express.Request, res: express.Response) => {
 });
 
 // 4.1 Delete template
-app.delete('/api/templates/:id', (req: express.Request, res: express.Response) => {
+app.delete('/api/templates/:id', async (req: express.Request, res: express.Response) => {
   const { id } = req.params;
   const token = req.headers.authorization || req.body.token;
 
@@ -335,13 +336,13 @@ app.delete('/api/templates/:id', (req: express.Request, res: express.Response) =
     return;
   }
   
-  const tokenInfo = db.getToken(token);
+  const tokenInfo = await db.getToken(token);
   if (!tokenInfo || tokenInfo.role !== 'master') {
     res.status(403).json({ error: 'Only master can delete templates' });
     return;
   }
 
-  const success = db.deleteTemplate(id);
+  const success = await db.deleteTemplate(id);
   if (success) {
     res.json({ success: true });
   } else {
@@ -350,7 +351,7 @@ app.delete('/api/templates/:id', (req: express.Request, res: express.Response) =
 });
 
 // 4.2 Rename/Move template
-app.put('/api/templates/:id', (req: express.Request, res: express.Response) => {
+app.put('/api/templates/:id', async (req: express.Request, res: express.Response) => {
   const { id } = req.params;
   const { title, folder, token } = req.body;
   const authToken = req.headers.authorization || token;
@@ -360,7 +361,7 @@ app.put('/api/templates/:id', (req: express.Request, res: express.Response) => {
     return;
   }
   
-  const tokenInfo = db.getToken(authToken);
+  const tokenInfo = await db.getToken(authToken);
   if (!tokenInfo || tokenInfo.role !== 'master') {
     res.status(403).json({ error: 'Only master can edit templates' });
     return;
@@ -375,7 +376,7 @@ app.put('/api/templates/:id', (req: express.Request, res: express.Response) => {
   if (title !== undefined) updates.title = title;
   if (folder !== undefined) updates.folder = folder;
   
-  const success = db.updateTemplate(id, updates);
+  const success = await db.updateTemplate(id, updates);
   if (success) {
     res.json({ success: true });
   } else {
@@ -384,9 +385,9 @@ app.put('/api/templates/:id', (req: express.Request, res: express.Response) => {
 });
 
 // 5. Download original Excel file for a specific template
-app.get('/api/templates/:id/excel', (req: express.Request, res: express.Response) => {
+app.get('/api/templates/:id/excel', async (req: express.Request, res: express.Response) => {
   const { id } = req.params;
-  const template = db.getTemplate(id);
+  const template = await db.getTemplate(id);
   
   if (!template) {
     res.status(404).json({ error: 'Template not found' });
@@ -516,7 +517,7 @@ app.post(
         return;
       }
       const token = authHeader.split(' ')[1];
-      const tokenInfo = db.getToken(token);
+      const tokenInfo = await db.getToken(token);
       
       if (!tokenInfo) {
         res.status(401).json({ error: 'Invalid token' });
@@ -524,7 +525,7 @@ app.post(
       }
 
       const templateId = req.params.id;
-      const template = db.getTemplate(templateId);
+      const template = await db.getTemplate(templateId);
       if (!template) {
         res.status(404).json({ error: 'Template not found on server' });
         return;
@@ -551,7 +552,7 @@ app.post(
       }
 
       if (!isUnlimited && tokenInfo.role === 'member' && tokenInfo.masterToken) {
-        const masterInfo = db.getToken(tokenInfo.masterToken);
+        const masterInfo = await db.getToken(tokenInfo.masterToken);
         if (masterInfo) {
           // Master is always unlimited; member inherits
           if (masterInfo.role === 'master') isUnlimited = true;
@@ -565,7 +566,7 @@ app.post(
       // 如果沒有吃到飽權限 (個人未訂閱，或企業主帳號已過期)，則依據頁數扣除自己的點數
       if (!isUnlimited) {
         const requiredPoints = template.pages || 1;
-        const success = db.consumePoints(token, requiredPoints);
+        const success = await db.consumePoints(token, requiredPoints);
         if (!success) {
           res.status(402).json({ error: 'Insufficient points', requiredPoints });
           return;
@@ -699,7 +700,7 @@ app.post(
       if (targetFolderId) {
         const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
         const masterToken = tokenInfo.role === 'master' ? tokenInfo.token : (tokenInfo.masterToken || '');
-        db.saveExportedFile(fileId, masterToken, targetFolderId, targetFilename, format, generatedBase64);
+        await db.saveExportedFile(fileId, masterToken, targetFolderId, targetFilename, format, generatedBase64);
       }
     } catch (err: any) {
       console.error('Error exporting web template:', err);
@@ -722,14 +723,14 @@ app.get('/api/export-folders', async (req: express.Request, res: express.Respons
       return;
     }
     const token = authHeader.split(' ')[1];
-    const tokenInfo = db.getToken(token);
+    const tokenInfo = await db.getToken(token);
     if (!tokenInfo) {
       res.status(401).json({ error: 'Invalid token' });
       return;
     }
 
     const masterToken = tokenInfo.role === 'master' ? tokenInfo.token : (tokenInfo.masterToken || '');
-    const folders = db.getExportFolders(masterToken);
+    const folders = await db.getExportFolders(masterToken);
     res.json(folders);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -744,7 +745,7 @@ app.post('/api/export-folders', async (req: express.Request, res: express.Respon
       return;
     }
     const token = authHeader.split(' ')[1];
-    const tokenInfo = db.getToken(token);
+    const tokenInfo = await db.getToken(token);
     if (!tokenInfo) {
       res.status(401).json({ error: 'Invalid token' });
       return;
@@ -758,7 +759,7 @@ app.post('/api/export-folders', async (req: express.Request, res: express.Respon
     }
 
     const id = `ef_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-    const folder = db.createExportFolder(id, masterToken, name, parentId || null);
+    const folder = await db.createExportFolder(id, masterToken, name, parentId || null);
     res.json(folder);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -773,12 +774,12 @@ app.delete('/api/export-folders/:id', async (req: express.Request, res: express.
       return;
     }
     const token = authHeader.split(' ')[1];
-    const tokenInfo = db.getToken(token);
+    const tokenInfo = await db.getToken(token);
     if (!tokenInfo || tokenInfo.role !== 'master') {
       res.status(403).json({ error: 'Only master account can delete folders' });
       return;
     }
-    db.deleteExportFolder(req.params.id);
+    await db.deleteExportFolder(req.params.id);
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -793,12 +794,13 @@ app.get('/api/exported-files/:folderId', async (req: express.Request, res: expre
       return;
     }
     const token = authHeader.split(' ')[1];
-    if (!db.getToken(token)) {
+    const tokenInfo = await db.getToken(token);
+    if (!tokenInfo) {
       res.status(401).json({ error: 'Invalid token' });
       return;
     }
 
-    const files = db.getExportedFiles(req.params.folderId);
+    const files = await db.getExportedFiles(req.params.folderId);
     res.json(files);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -813,12 +815,12 @@ app.delete('/api/exported-files/:id', async (req: express.Request, res: express.
       return;
     }
     const token = authHeader.split(' ')[1];
-    const tokenInfo = db.getToken(token);
+    const tokenInfo = await db.getToken(token);
     if (!tokenInfo || tokenInfo.role !== 'master') {
       res.status(403).json({ error: 'Only master account can delete files' });
       return;
     }
-    db.deleteExportedFile(req.params.id);
+    await db.deleteExportedFile(req.params.id);
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -833,12 +835,13 @@ app.get('/api/exported-files/preview/:id', async (req: express.Request, res: exp
       return;
     }
     const token = authHeader.split(' ')[1];
-    if (!db.getToken(token)) {
+    const tokenInfo = await db.getToken(token);
+    if (!tokenInfo) {
       res.status(401).json({ error: 'Invalid token' });
       return;
     }
 
-    const file = db.getExportedFileById(req.params.id);
+    const file = await db.getExportedFileById(req.params.id);
     if (!file) {
       res.status(404).json({ error: 'File not found' });
       return;
@@ -864,12 +867,13 @@ app.get('/api/exported-files/download/:id', async (req: express.Request, res: ex
       return;
     }
     const token = authHeader.split(' ')[1];
-    if (!db.getToken(token)) {
+    const tokenInfo = await db.getToken(token);
+    if (!tokenInfo) {
       res.status(401).json({ error: 'Invalid token' });
       return;
     }
 
-    const file = db.getExportedFileById(req.params.id);
+    const file = await db.getExportedFileById(req.params.id);
     if (!file) {
       res.status(404).json({ error: 'File not found' });
       return;
