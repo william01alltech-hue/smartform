@@ -347,6 +347,11 @@ class SQLiteDatabase {
     const masterInfo = this.getToken(masterToken);
     if (!masterInfo) return 3;
 
+    // Master account and william_master_token has unlimited capacity
+    if (masterInfo.role === 'master' || masterToken === 'william_master_token') {
+      return 9999;
+    }
+
     let base = 3;
     switch(masterInfo.subscriptionPlan) {
       case 'personal_pro': base = 10; break;
