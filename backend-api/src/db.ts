@@ -81,6 +81,8 @@ export interface TokenInfo {
   dailyAdWatchCount?: number;
   
   allowedFolders?: string[]; // null/undefined/empty array all handled: if empty, no access. If undefined, all access (backward compatibility, but going forward new tokens might have it). Wait, the rule is "empty means no access, full check means all access". Let's say undefined means all access for backward compatibility, but in UI we treat it appropriately.
+  memberId?: string;
+  memberName?: string;
 }
 
 interface TemplateInfo {
@@ -161,6 +163,15 @@ class SQLiteDatabase {
     const info = this.getToken(token);
     if (!info) return false;
     info.allowedFolders = folders;
+    this.saveToken(info);
+    return true;
+  }
+
+  public updateMemberMetadata(token: string, memberId: string | undefined, memberName: string | undefined): boolean {
+    const info = this.getToken(token);
+    if (!info) return false;
+    info.memberId = memberId;
+    info.memberName = memberName;
     this.saveToken(info);
     return true;
   }

@@ -58,14 +58,21 @@ app.post('/api/auth/generate-member-token', verifyToken('master'), (req: express
     return;
   }
 
+  const { memberId, memberName } = req.body;
+
   // Generate new member token
   const memberToken = `member_${uuidv4().substring(0, 8)}`;
   const tokenInfoObj = db.createToken(memberToken, 'member', tokenInfo.token);
-  // Default to undefined (all access). We will allow modifying it later.
+  
+  if (memberId || memberName) {
+    db.updateMemberMetadata(memberToken, memberId || '', memberName || '');
+  }
 
   res.json({
     success: true,
     memberToken,
+    memberId: tokenInfoObj.memberId,
+    memberName: tokenInfoObj.memberName,
     allowedFolders: tokenInfoObj.allowedFolders
   });
 });
@@ -78,6 +85,8 @@ app.get('/api/auth/member-tokens', verifyToken('master'), (req: express.Request,
     success: true,
     members: members.map(m => ({
       token: m.token,
+      memberId: m.memberId || '',
+      memberName: m.memberName || '',
       allowedFolders: m.allowedFolders
     }))
   });
@@ -95,13 +104,25 @@ app.put('/api/auth/member-tokens/:token', verifyToken('master'), (req: express.R
     return;
   }
 
-  const { allowedFolders } = req.body;
+  const { allowedFolders, memberId, memberName } = req.body;
   
   // if allowedFolders is passed as null or undefined, we treat it as undefined (all access)
   // if it's an array, we save it.
   const foldersToSave = Array.isArray(allowedFolders) ? allowedFolders : undefined;
   
-  const success = db.updateTokenFolders(memberToken, foldersToSave);
+  let success = true;
+  if (allowedFolders !== undefined) {
+    success = db.updateTokenFolders(memberToken, foldersToSave);
+  }
+  
+  if (success && (memberId !== undefined || memberName !== undefined)) {
+    // Keep existing metadata if not explicitly provided
+    const currentInfo = db.getToken(memberToken);
+    const newId = memberId !== undefined ? memberId : currentInfo?.memberId;
+    const newName = memberName !== undefined ? memberName : currentInfo?.memberName;
+    success = db.updateMemberMetadata(memberToken, newId, newName);
+  }
+  
   if (success) {
     res.json({ success: true });
   } else {
