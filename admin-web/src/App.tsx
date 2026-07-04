@@ -182,9 +182,6 @@ const Dashboard: React.FC = () => {
   }, []);
 
   const generateMemberToken = async () => {
-    const memberId = window.prompt('請輸入成員編號/工號 (選填)：') || '';
-    const memberName = window.prompt('請輸入成員姓名 (選填)：') || '';
-
     try {
       const response = await fetch(`${API_BASE}/api/auth/generate-member-token`, {
         method: 'POST',
@@ -192,7 +189,7 @@ const Dashboard: React.FC = () => {
           'Content-Type': 'application/json',
           'Authorization': MASTER_TOKEN
         },
-        body: JSON.stringify({ token: MASTER_TOKEN, memberId, memberName })
+        body: JSON.stringify({ token: MASTER_TOKEN })
       });
       const data = await response.json();
       if (data.success) {
