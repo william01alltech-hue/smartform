@@ -8,6 +8,9 @@ export const ExportManager: React.FC = () => {
   const [selectedFolder, setSelectedFolder] = useState<any | null>(null);
   const [files, setFiles] = useState<any[]>([]);
   const [newFolderName, setNewFolderName] = useState('');
+  const [previewSheets, setPreviewSheets] = useState<any[] | null>(null);
+  const [previewTitle, setPreviewTitle] = useState('');
+  const [activePreviewSheetIndex, setActivePreviewSheetIndex] = useState(0);
 
   const fetchFolders = async () => {
     try {
@@ -74,6 +77,38 @@ export const ExportManager: React.FC = () => {
         a.download = `${filename}.${format}`;
         a.click();
       });
+   };
+
+  const previewFile = (fileId: string, filename: string, format: string) => {
+    if (format === 'pdf') {
+      fetch(`${API_BASE}/api/exported-files/download/${fileId}`, {
+        headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
+      })
+        .then(res => res.blob())
+        .then(blob => {
+          const fileURL = URL.createObjectURL(blob);
+          window.open(fileURL, '_blank');
+        });
+    } else {
+      // Excel preview
+      fetch(`${API_BASE}/api/exported-files/preview/${fileId}`, {
+        headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.visualSheets) {
+            setPreviewSheets(data.visualSheets);
+            setPreviewTitle(`${filename}.${format}`);
+            setActivePreviewSheetIndex(0);
+          } else {
+            alert('無法載入 Excel 預覽數據: ' + (data.error || '未知錯誤'));
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert('載入預覽時發生錯誤');
+        });
+    }
   };
 
   const handleDeleteFile = async (fileId: string, filename: string, e: React.MouseEvent) => {
@@ -209,6 +244,12 @@ export const ExportManager: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button 
+                        onClick={() => previewFile(file.id, file.filename, file.format)}
+                        style={{ padding: '6px 12px', borderRadius: '6px', background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+                      >
+                        預覽
+                      </button>
+                      <button 
                         onClick={() => downloadFile(file.id, file.filename, file.format)}
                         style={{ padding: '6px 12px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.2)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
                       >
@@ -232,6 +273,107 @@ export const ExportManager: React.FC = () => {
           </div>
         )}
       </div>
+      {/* Excel Preview Modal */}
+      {previewSheets && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+        }}>
+          <div className="glass-panel" style={{ padding: '24px', width: '90%', maxWidth: '1000px', height: '85%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', color: '#fff' }}>📊 檔案預覽: {previewTitle}</h2>
+              <button 
+                onClick={() => setPreviewSheets(null)}
+                style={{ padding: '6px 12px', borderRadius: '6px', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                關閉預覽
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {previewSheets.map((sheet, index) => (
+                <button
+                  key={index}
+                  onClick={() => setActivePreviewSheetIndex(index)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    backgroundColor: activePreviewSheetIndex === index ? '#8b5cf6' : '#18181b',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {sheet.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="custom-scrollbar" style={{ overflowX: 'scroll', flex: 1, overflowY: 'auto', border: '1px solid #cbd5e1', borderRadius: '12px', background: '#ffffff', color: '#18181b' }}>
+              <table style={{ borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }}>
+                <colgroup>
+                  {(previewSheets[activePreviewSheetIndex].columnWidths || []).map((w: number, idx: number) => (
+                    <col key={idx} style={{ width: `${w}px` }} />
+                  ))}
+                </colgroup>
+                <thead>
+                  <tr style={{ backgroundColor: '#f4f4f5' }}>
+                    <th style={{ border: '1px solid #cbd5e1', width: '40px', textAlign: 'center', backgroundColor: '#f4f4f5' }}></th>
+                    {(previewSheets[activePreviewSheetIndex].columnWidths || []).map((_: any, cIdx: number) => {
+                      const colLetter = String.fromCharCode(65 + cIdx);
+                      return (
+                        <th key={cIdx} style={{ border: '1px solid #cbd5e1', padding: '4px', textAlign: 'center', fontWeight: 'bold', backgroundColor: '#f4f4f5' }}>
+                          {colLetter}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewSheets[activePreviewSheetIndex].rows.map((row: any[], rIdx: number) => {
+                    const rowHeight = previewSheets[activePreviewSheetIndex].rowHeights?.[rIdx] || 26;
+                    return (
+                      <tr key={rIdx} style={{ height: `${rowHeight}px` }}>
+                        <td style={{ border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 'bold', backgroundColor: '#f4f4f5', width: '40px' }}>
+                          {rIdx + 1}
+                        </td>
+                        {row.map((cell: any, cIdx: number) => {
+                          if (cell.isSlave) return null;
+                          return (
+                            <td
+                              key={cIdx}
+                              rowSpan={cell.rowSpan || 1}
+                              colSpan={cell.colSpan || 1}
+                              style={{
+                                border: '1px solid #cbd5e1',
+                                padding: '4px 6px',
+                                verticalAlign: cell.valign || 'middle',
+                                textAlign: cell.align || 'left',
+                                backgroundColor: cell.bgColor || '#ffffff',
+                                color: cell.color || '#18181b',
+                                fontWeight: cell.bold ? 'bold' : 'normal',
+                                fontStyle: cell.italic ? 'italic' : 'normal',
+                                textDecoration: cell.underline ? 'underline' : 'none',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                              }}
+                            >
+                              {cell.value}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
