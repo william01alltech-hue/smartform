@@ -574,7 +574,7 @@ app.post(
       });
 
       // Check requested format
-      const format = req.query.format === 'pdf' ? 'pdf' : 'excel';
+      const format = req.query.format === 'pdf' ? 'pdf' : 'xlsx';
       const targetFolderId = req.body.folderId || null;
       const targetFilename = req.body.filename || `compiled_${templateId}`;
       let generatedBase64 = '';

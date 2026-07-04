@@ -237,7 +237,7 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates }) => {
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = `${clientTemplate.title}_${new Date().getTime()}.xlsx`;
+              a.download = `${targetFilename || clientTemplate.title}.xlsx`;
               a.click();
               alert('✅ 表單已成功送出並下載！');
               setClientTemplate(null);
