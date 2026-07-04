@@ -805,6 +805,26 @@ app.get('/api/exported-files/:folderId', async (req: express.Request, res: expre
   }
 });
 
+app.delete('/api/exported-files/:id', async (req: express.Request, res: express.Response): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ error: 'Missing or invalid token' });
+      return;
+    }
+    const token = authHeader.split(' ')[1];
+    const tokenInfo = db.getToken(token);
+    if (!tokenInfo || tokenInfo.role !== 'master') {
+      res.status(403).json({ error: 'Only master account can delete files' });
+      return;
+    }
+    db.deleteExportedFile(req.params.id);
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/exported-files/download/:id', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
