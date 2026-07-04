@@ -496,37 +496,63 @@ export class ExcelService {
             }
           }
 
-          const mode = (fieldConfig as any)?.imageSizeMode || 'fill';
           const count = fileBuffers.length;
 
-          // Calculate total cell pixel dimensions
-          let rangeWidthPx = 0;
+          // Build column pixel widths array
+          const colWidths: number[] = [];
           for (let c = effectiveStartCol; c <= effectiveEndCol; c++) {
             const w = worksheet.getColumn(c).width;
-            rangeWidthPx += Math.round((w !== undefined && w > 0 ? w : 9) * 8);
+            colWidths.push(Math.round((w !== undefined && w > 0 ? w : 9) * 8));
           }
-          let rangeHeightPx = 0;
+          const totalWidthPx = colWidths.reduce((a, b) => a + b, 0);
+
+          // Build row pixel heights array
+          const rowHeights: number[] = [];
           for (let r = effectiveStartRow; r <= effectiveEndRow; r++) {
             const h = worksheet.getRow(r).height;
-            rangeHeightPx += Math.round((h !== undefined && h > 0 ? h : 15) * 1.3333);
+            rowHeights.push(Math.round((h !== undefined && h > 0 ? h : 15) * 1.3333));
           }
+          const totalHeightPx = rowHeights.reduce((a, b) => a + b, 0);
 
-          const firstColW = worksheet.getColumn(effectiveStartCol).width || 9;
-          const firstColPx = Math.round(firstColW * 8);
-          const firstRowH = worksheet.getRow(effectiveStartRow).height || 15;
-          const firstRowPx = Math.round(firstRowH * 1.3333);
+          // Helper: convert pixel offset to { colIndex (0-based), fraction }
+          const pxToColFrac = (px: number): number => {
+            let accumulated = 0;
+            for (let i = 0; i < colWidths.length; i++) {
+              if (accumulated + colWidths[i] >= px) {
+                const remainder = px - accumulated;
+                const fraction = colWidths[i] > 0 ? remainder / colWidths[i] : 0;
+                return (effectiveStartCol - 1 + i) + Math.min(fraction, 0.99);
+              }
+              accumulated += colWidths[i];
+            }
+            return effectiveEndCol; // clamp to end
+          };
+
+          const pxToRowFrac = (px: number): number => {
+            let accumulated = 0;
+            for (let i = 0; i < rowHeights.length; i++) {
+              if (accumulated + rowHeights[i] >= px) {
+                const remainder = px - accumulated;
+                const fraction = rowHeights[i] > 0 ? remainder / rowHeights[i] : 0;
+                return (effectiveStartRow - 1 + i) + Math.min(fraction, 0.99);
+              }
+              accumulated += rowHeights[i];
+            }
+            return effectiveEndRow; // clamp to end
+          };
 
           // Determine grid layout based on count
           let gridCols = 1, gridRows = 1;
           if (count === 2) {
-            if (rangeWidthPx >= rangeHeightPx) { gridCols = 2; gridRows = 1; }
+            if (totalWidthPx >= totalHeightPx) { gridCols = 2; gridRows = 1; }
             else { gridCols = 1; gridRows = 2; }
           } else if (count >= 3) {
             gridCols = 2; gridRows = 2;
           }
 
-          const cellW = rangeWidthPx / gridCols;
-          const cellH = rangeHeightPx / gridRows;
+          const cellW = totalWidthPx / gridCols;
+          const cellH = totalHeightPx / gridRows;
+          const padding = count > 1 ? 2 : 0; // small padding between grid items
 
           fileBuffers.slice(0, 4).forEach((fileBuffer, idx) => {
             const imageId = workbook.addImage({
@@ -537,56 +563,16 @@ export class ExcelService {
             const gc = idx % gridCols;
             const gr = Math.floor(idx / gridCols);
 
-            const baseOffsetX = gc * cellW;
-            const baseOffsetY = gr * cellH;
+            const x1 = gc * cellW + padding;
+            const y1 = gr * cellH + padding;
+            const x2 = (gc + 1) * cellW - padding;
+            const y2 = (gr + 1) * cellH - padding;
 
-            if (mode === 'fill') {
-              worksheet.addImage(imageId, {
-                tl: {
-                  col: (effectiveStartCol - 1) + (baseOffsetX / firstColPx),
-                  row: (effectiveStartRow - 1) + (baseOffsetY / firstRowPx)
-                } as any,
-                ext: { width: cellW, height: cellH },
-                editAs: 'oneCell'
-              });
-            } else {
-              let extWidthPx = cellW;
-              let extHeightPx = cellH;
-              let offsetX = 0;
-              let offsetY = 0;
-
-              if (mode === 'padding10') {
-                const pad = count > 1 ? 5 : 13;
-                extWidthPx = Math.max(10, cellW - 2 * pad);
-                extHeightPx = Math.max(10, cellH - 2 * pad);
-                offsetX = pad;
-                offsetY = pad;
-              } else if (mode === 'contain') {
-                const imgAspect = fieldConfig?.aspectRatio || 1.3333;
-                const ca = cellW / cellH;
-                if (ca > imgAspect) {
-                  extHeightPx = cellH;
-                  extWidthPx = Math.round(extHeightPx * imgAspect);
-                  offsetX = Math.round((cellW - extWidthPx) / 2);
-                } else {
-                  extWidthPx = cellW;
-                  extHeightPx = Math.round(extWidthPx / imgAspect);
-                  offsetY = Math.round((cellH - extHeightPx) / 2);
-                }
-              }
-
-              const finalOffX = baseOffsetX + offsetX;
-              const finalOffY = baseOffsetY + offsetY;
-
-              worksheet.addImage(imageId, {
-                tl: {
-                  col: (effectiveStartCol - 1) + (firstColPx > 0 ? finalOffX / firstColPx : 0),
-                  row: (effectiveStartRow - 1) + (firstRowPx > 0 ? finalOffY / firstRowPx : 0)
-                } as any,
-                ext: { width: extWidthPx, height: extHeightPx },
-                editAs: 'oneCell'
-              });
-            }
+            worksheet.addImage(imageId, {
+              tl: { col: pxToColFrac(x1), row: pxToRowFrac(y1) } as any,
+              br: { col: pxToColFrac(x2), row: pxToRowFrac(y2) } as any,
+              editAs: 'oneCell'
+            });
           });
         }
       } else {
