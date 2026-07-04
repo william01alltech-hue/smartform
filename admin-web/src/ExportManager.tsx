@@ -76,6 +76,24 @@ export const ExportManager: React.FC = () => {
       });
   };
 
+  const handleDeleteFile = async (fileId: string, filename: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`確定要刪除檔案「${filename}」嗎？此動作無法復原。`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/exported-files/${fileId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
+      });
+      if (res.ok && selectedFolder) {
+        fetchFiles(selectedFolder.id);
+      } else {
+        alert('刪除失敗');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleDeleteFolder = async (folder: any, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm(`確定要刪除「${folder.name}」？此動作會同時刪除所有子資料夾與其中的檔案，無法復原。`)) return;
@@ -189,12 +207,20 @@ export const ExportManager: React.FC = () => {
                         <span style={{ color: '#a1a1aa', fontSize: '11px' }}>匯出時間: {new Date(file.createdAt).toLocaleString()}</span>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => downloadFile(file.id, file.filename, file.format)}
-                      style={{ padding: '6px 12px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.2)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
-                    >
-                      下載檔案
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => downloadFile(file.id, file.filename, file.format)}
+                        style={{ padding: '6px 12px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.2)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+                      >
+                        下載檔案
+                      </button>
+                      <button 
+                        onClick={(e) => handleDeleteFile(file.id, file.filename, e)}
+                        style={{ padding: '6px 12px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+                      >
+                        刪除
+                      </button>
+                    </div>
                   </div>
                 ))
               )}

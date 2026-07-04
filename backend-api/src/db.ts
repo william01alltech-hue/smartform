@@ -204,6 +204,11 @@ class SQLiteDatabase {
     return dbInstance.prepare('SELECT * FROM exported_files WHERE id = ?').get(id) as ExportedFile | undefined;
   }
 
+  public deleteExportedFile(id: string): boolean {
+    dbInstance.prepare('DELETE FROM exported_files WHERE id = ?').run(id);
+    return true;
+  }
+
   public deleteExportFolder(id: string): boolean {
     // Recursively delete all child folders and their files
     const children = dbInstance.prepare('SELECT id FROM export_folders WHERE parentId = ?').all(id) as { id: string }[];
