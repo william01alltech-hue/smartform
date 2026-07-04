@@ -749,6 +749,28 @@ export class ExcelService {
       }
     });
 
+    // Set all worksheets to A4 full page
+    workbook.eachSheet((worksheet) => {
+      worksheet.pageSetup = {
+        ...worksheet.pageSetup,
+        paperSize: 9, // A4
+        orientation: 'portrait',
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0, // 0 = auto height, fit width only
+        horizontalCentered: true,
+        verticalCentered: false,
+        margins: {
+          left: 0.2,
+          right: 0.2,
+          top: 0.3,
+          bottom: 0.3,
+          header: 0.1,
+          footer: 0.1
+        }
+      };
+    });
+
     const outputBuffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(outputBuffer as any);
   }
