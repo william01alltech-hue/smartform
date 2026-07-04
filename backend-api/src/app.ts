@@ -825,6 +825,37 @@ app.delete('/api/exported-files/:id', async (req: express.Request, res: express.
   }
 });
 
+app.get('/api/exported-files/preview/:id', async (req: express.Request, res: express.Response): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ error: 'Missing or invalid token' });
+      return;
+    }
+    const token = authHeader.split(' ')[1];
+    if (!db.getToken(token)) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const file = db.getExportedFileById(req.params.id);
+    if (!file) {
+      res.status(404).json({ error: 'File not found' });
+      return;
+    }
+
+    if (file.format === 'xlsx') {
+      const buffer = Buffer.from(file.dataBase64, 'base64');
+      const parsed = await ExcelService.parseTemplate(buffer);
+      res.json({ visualSheets: parsed.visualSheets });
+    } else {
+      res.status(400).json({ error: 'Only Excel files can be previewed as grid JSON' });
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/exported-files/download/:id', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
