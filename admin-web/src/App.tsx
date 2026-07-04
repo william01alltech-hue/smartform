@@ -339,7 +339,7 @@ const Dashboard: React.FC = () => {
       setHasUploaded(true);
     } catch (error) {
       console.error(error);
-      alert('無法連線至本地端伺服器 (http://localhost:3000)，請確認後端已啟動！');
+      alert(`連線或解析失敗: ${error instanceof Error ? error.message : '未知錯誤'}。請確認後端服務正常且上傳檔案正確！`);
     } finally {
       setLoading(false);
     }
