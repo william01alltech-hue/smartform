@@ -8,9 +8,17 @@ export const ExportManager: React.FC = () => {
   const [selectedFolder, setSelectedFolder] = useState<any | null>(null);
   const [files, setFiles] = useState<any[]>([]);
   const [newFolderName, setNewFolderName] = useState('');
-  const [previewSheets, setPreviewSheets] = useState<any[] | null>(null);
-  const [previewTitle, setPreviewTitle] = useState('');
-  const [activePreviewSheetIndex, setActivePreviewSheetIndex] = useState(0);
+  interface PreviewTab {
+    id: string;
+    filename: string;
+    format: string;
+    visualSheets?: any[];
+    fileUrl?: string;
+    activeSheetIndex?: number;
+  }
+
+  const [previewTabs, setPreviewTabs] = useState<PreviewTab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
   const fetchFolders = async () => {
     try {
@@ -80,6 +88,13 @@ export const ExportManager: React.FC = () => {
    };
 
   const previewFile = (fileId: string, filename: string, format: string) => {
+    // Check if already open
+    const existing = previewTabs.find(t => t.id === fileId);
+    if (existing) {
+      setActiveTabId(fileId);
+      return;
+    }
+
     if (format === 'pdf') {
       fetch(`${API_BASE}/api/exported-files/download/${fileId}`, {
         headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
@@ -87,7 +102,14 @@ export const ExportManager: React.FC = () => {
         .then(res => res.blob())
         .then(blob => {
           const fileURL = URL.createObjectURL(blob);
-          window.open(fileURL, '_blank');
+          const newTab: PreviewTab = {
+            id: fileId,
+            filename: `${filename}.${format}`,
+            format,
+            fileUrl: fileURL
+          };
+          setPreviewTabs(prev => [...prev, newTab]);
+          setActiveTabId(fileId);
         });
     } else {
       // Excel preview
@@ -97,9 +119,15 @@ export const ExportManager: React.FC = () => {
         .then(res => res.json())
         .then(data => {
           if (data.visualSheets) {
-            setPreviewSheets(data.visualSheets);
-            setPreviewTitle(`${filename}.${format}`);
-            setActivePreviewSheetIndex(0);
+            const newTab: PreviewTab = {
+              id: fileId,
+              filename: `${filename}.${format}`,
+              format,
+              visualSheets: data.visualSheets,
+              activeSheetIndex: 0
+            };
+            setPreviewTabs(prev => [...prev, newTab]);
+            setActiveTabId(fileId);
           } else {
             alert('無法載入 Excel 預覽數據: ' + (data.error || '未知錯誤'));
           }
@@ -109,6 +137,23 @@ export const ExportManager: React.FC = () => {
           alert('載入預覽時發生錯誤');
         });
     }
+  };
+
+  const closeTab = (tabId: string) => {
+    setPreviewTabs(prev => {
+      const filtered = prev.filter(t => t.id !== tabId);
+      const closedTab = prev.find(t => t.id === tabId);
+      if (closedTab && closedTab.fileUrl) {
+        URL.revokeObjectURL(closedTab.fileUrl);
+      }
+
+      if (filtered.length === 0) {
+        setActiveTabId(null);
+      } else if (activeTabId === tabId) {
+        setActiveTabId(filtered[filtered.length - 1].id);
+      }
+      return filtered;
+    });
   };
 
   const handleDeleteFile = async (fileId: string, filename: string, e: React.MouseEvent) => {
@@ -273,104 +318,191 @@ export const ExportManager: React.FC = () => {
           </div>
         )}
       </div>
-      {/* Excel Preview Modal */}
-      {previewSheets && (
+      {/* Multi-Tab Preview Modal */}
+      {previewTabs.length > 0 && activeTabId && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
         }}>
-          <div className="glass-panel" style={{ padding: '24px', width: '90%', maxWidth: '1000px', height: '85%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: '18px', color: '#fff' }}>📊 檔案預覽: {previewTitle}</h2>
+          <div className="glass-panel" style={{ padding: '20px', width: '95%', maxWidth: '1200px', height: '90%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            
+            {/* Top Bar: Tabs + Close All Button */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
+              
+              {/* Document/Excel Tab list */}
+              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', flex: 1, marginRight: '16px' }}>
+                {previewTabs.map(tab => {
+                  const isActive = tab.id === activeTabId;
+                  return (
+                    <div 
+                      key={tab.id}
+                      onClick={() => setActiveTabId(tab.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '6px 12px',
+                        borderRadius: '8px 8px 0 0',
+                        backgroundColor: isActive ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderBottom: isActive ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                        cursor: 'pointer',
+                        color: isActive ? '#fff' : '#a1a1aa',
+                        fontSize: '13px',
+                        fontWeight: isActive ? 'bold' : 'normal',
+                        transition: 'all 0.15s ease',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      <span>{tab.format === 'pdf' ? '📄' : '📊'} {tab.filename}</span>
+                      <span 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeTab(tab.id);
+                        }}
+                        style={{
+                          fontSize: '12px',
+                          color: '#ef4444',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          borderRadius: '4px',
+                          background: 'rgba(239, 68, 68, 0.1)'
+                        }}
+                      >
+                        ✕
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
               <button 
-                onClick={() => setPreviewSheets(null)}
-                style={{ padding: '6px 12px', borderRadius: '6px', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+                onClick={() => {
+                  previewTabs.forEach(t => {
+                    if (t.fileUrl) URL.revokeObjectURL(t.fileUrl);
+                  });
+                  setPreviewTabs([]);
+                  setActiveTabId(null);
+                }}
+                style={{ padding: '6px 12px', borderRadius: '6px', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
               >
-                關閉預覽
+                關閉全部
               </button>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {previewSheets.map((sheet, index) => (
-                <button
-                  key={index}
-                  onClick={() => setActivePreviewSheetIndex(index)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    backgroundColor: activePreviewSheetIndex === index ? '#8b5cf6' : '#18181b',
-                    border: 'none',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  {sheet.name}
-                </button>
-              ))}
-            </div>
+            {/* Active Content Rendering */}
+            {(() => {
+              const activeTab = previewTabs.find(t => t.id === activeTabId);
+              if (!activeTab) return null;
 
-            <div className="custom-scrollbar" style={{ overflowX: 'scroll', flex: 1, overflowY: 'auto', border: '1px solid #cbd5e1', borderRadius: '12px', background: '#ffffff', color: '#18181b' }}>
-              <table style={{ borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }}>
-                <colgroup>
-                  {(previewSheets[activePreviewSheetIndex].columnWidths || []).map((w: number, idx: number) => (
-                    <col key={idx} style={{ width: `${w}px` }} />
-                  ))}
-                </colgroup>
-                <thead>
-                  <tr style={{ backgroundColor: '#f4f4f5' }}>
-                    <th style={{ border: '1px solid #cbd5e1', width: '40px', textAlign: 'center', backgroundColor: '#f4f4f5' }}></th>
-                    {(previewSheets[activePreviewSheetIndex].columnWidths || []).map((_: any, cIdx: number) => {
-                      const colLetter = String.fromCharCode(65 + cIdx);
-                      return (
-                        <th key={cIdx} style={{ border: '1px solid #cbd5e1', padding: '4px', textAlign: 'center', fontWeight: 'bold', backgroundColor: '#f4f4f5' }}>
-                          {colLetter}
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewSheets[activePreviewSheetIndex].rows.map((row: any[], rIdx: number) => {
-                    const rowHeight = previewSheets[activePreviewSheetIndex].rowHeights?.[rIdx] || 26;
-                    return (
-                      <tr key={rIdx} style={{ height: `${rowHeight}px` }}>
-                        <td style={{ border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 'bold', backgroundColor: '#f4f4f5', width: '40px' }}>
-                          {rIdx + 1}
-                        </td>
-                        {row.map((cell: any, cIdx: number) => {
-                          if (cell.isSlave) return null;
-                          return (
-                            <td
-                              key={cIdx}
-                              rowSpan={cell.rowSpan || 1}
-                              colSpan={cell.colSpan || 1}
-                              style={{
-                                border: '1px solid #cbd5e1',
-                                padding: '4px 6px',
-                                verticalAlign: cell.valign || 'middle',
-                                textAlign: cell.align || 'left',
-                                backgroundColor: cell.bgColor || '#ffffff',
-                                color: cell.color || '#18181b',
-                                fontWeight: cell.bold ? 'bold' : 'normal',
-                                fontStyle: cell.italic ? 'italic' : 'normal',
-                                textDecoration: cell.underline ? 'underline' : 'none',
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                              }}
-                            >
-                              {cell.value}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+              if (activeTab.format === 'pdf') {
+                return (
+                  <div style={{ flex: 1, background: '#f4f4f5', borderRadius: '12px', overflow: 'hidden' }}>
+                    <iframe 
+                      src={activeTab.fileUrl} 
+                      title={activeTab.filename}
+                      style={{ width: '100%', height: '100%', border: 'none' }}
+                    />
+                  </div>
+                );
+              } else if (activeTab.format === 'xlsx' && activeTab.visualSheets) {
+                const activeSheetIdx = activeTab.activeSheetIndex ?? 0;
+                const activeSheet = activeTab.visualSheets[activeSheetIdx];
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, overflow: 'hidden' }}>
+                    
+                    {/* Excel Sheet switcher tabs */}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {activeTab.visualSheets.map((sheet, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setPreviewTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, activeSheetIndex: index } : t));
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            backgroundColor: activeSheetIdx === index ? '#8b5cf6' : '#18181b',
+                            border: 'none',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {sheet.name}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Sheet Grid Table view */}
+                    <div className="custom-scrollbar" style={{ overflowX: 'scroll', flex: 1, overflowY: 'auto', border: '1px solid #cbd5e1', borderRadius: '12px', background: '#ffffff', color: '#18181b' }}>
+                      <table style={{ borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }}>
+                        <colgroup>
+                          {(activeSheet.columnWidths || []).map((w: number, idx: number) => (
+                            <col key={idx} style={{ width: `${w}px` }} />
+                          ))}
+                        </colgroup>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f4f4f5' }}>
+                            <th style={{ border: '1px solid #cbd5e1', width: '40px', textAlign: 'center', backgroundColor: '#f4f4f5' }}></th>
+                            {(activeSheet.columnWidths || []).map((_: any, cIdx: number) => {
+                              const colLetter = String.fromCharCode(65 + cIdx);
+                              return (
+                                <th key={cIdx} style={{ border: '1px solid #cbd5e1', padding: '4px', textAlign: 'center', fontWeight: 'bold', backgroundColor: '#f4f4f5' }}>
+                                  {colLetter}
+                                </th>
+                              );
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activeSheet.rows.map((row: any[], rIdx: number) => {
+                            const rowHeight = activeSheet.rowHeights?.[rIdx] || 26;
+                            return (
+                              <tr key={rIdx} style={{ height: `${rowHeight}px` }}>
+                                <td style={{ border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 'bold', backgroundColor: '#f4f4f5', width: '40px' }}>
+                                  {rIdx + 1}
+                                </td>
+                                {row.map((cell: any, cIdx: number) => {
+                                  if (cell.isSlave) return null;
+                                  return (
+                                    <td
+                                      key={cIdx}
+                                      rowSpan={cell.rowSpan || 1}
+                                      colSpan={cell.colSpan || 1}
+                                      style={{
+                                        border: '1px solid #cbd5e1',
+                                        padding: '4px 6px',
+                                        verticalAlign: cell.valign || 'middle',
+                                        textAlign: cell.align || 'left',
+                                        backgroundColor: cell.bgColor || '#ffffff',
+                                        color: cell.color || '#18181b',
+                                        fontWeight: cell.bold ? 'bold' : 'normal',
+                                        fontStyle: cell.italic ? 'italic' : 'normal',
+                                        textDecoration: cell.underline ? 'underline' : 'none',
+                                        whiteSpace: 'pre-wrap',
+                                        wordBreak: 'break-word',
+                                      }}
+                                    >
+                                      {cell.value}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
       )}
