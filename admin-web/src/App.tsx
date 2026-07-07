@@ -21,6 +21,8 @@ interface FieldConfig {
   imageSizeMode?: 'fill' | 'padding10' | 'contain';
   dropdownOptions?: string;
   maxPhotos?: number;
+  formulaExpression?: string;
+  formulaUnit?: string;
 }
 
 const parseRangeForUI = (rangeStr: string) => {
@@ -955,6 +957,7 @@ const Dashboard: React.FC = () => {
                               <option value="signature">手寫簽名</option>
                               <option value="mobile">手機號碼</option>
                               <option value="tel">市內電話</option>
+                              <option value="formula">計算公式</option>
                             </select>
                             {field.type === 'dropdown' && (
                               <textarea
@@ -965,6 +968,24 @@ const Dashboard: React.FC = () => {
 選項3"
                                 style={{ marginTop: '4px', width: '80px', height: '40px', padding: '4px', borderRadius: '4px', backgroundColor: 'rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '10px', resize: 'none' }}
                               />
+                            )}
+                            {field.type === 'formula' && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+                                <input
+                                  type="text"
+                                  value={field.formulaExpression || ''}
+                                  onChange={(e) => updateField(idx, 'formulaExpression', e.target.value)}
+                                  placeholder="公式: {長}*{寬}"
+                                  style={{ width: '80px', padding: '4px', borderRadius: '4px', backgroundColor: 'rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '9px', outline: 'none' }}
+                                />
+                                <input
+                                  type="text"
+                                  value={field.formulaUnit || ''}
+                                  onChange={(e) => updateField(idx, 'formulaUnit', e.target.value)}
+                                  placeholder="單位: m³"
+                                  style={{ width: '80px', padding: '4px', borderRadius: '4px', backgroundColor: 'rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '9px', outline: 'none' }}
+                                />
+                              </div>
                             )}
                           </td>
                           <td style={{ padding: '8px 4px' }}>
@@ -1300,6 +1321,12 @@ const Dashboard: React.FC = () => {
                       placeholder={`請輸入數字 ${field.label || field.name}...`}
                       style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'rgba(0,0,0,0.2)', border: 'none', color: '#71717a', fontSize: '12px' }}
                     />
+                  )}
+                  {field.type === 'formula' && (
+                    <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid rgba(139, 92, 246, 0.3)', color: '#a78bfa', fontSize: '12px', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>🧮 公式: {field.formulaExpression || '未設定'}</span>
+                      {field.formulaUnit && <span style={{ opacity: 0.8 }}>({field.formulaUnit})</span>}
+                    </div>
                   )}
                   {field.type === 'mobile' && (
                     <input
