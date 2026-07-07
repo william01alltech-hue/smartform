@@ -971,6 +971,29 @@ const Dashboard: React.FC = () => {
                             )}
                             {field.type === 'formula' && (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+                                <select
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val) {
+                                      updateField(idx, 'formulaExpression', val);
+                                      if (val.includes('高度')) {
+                                        updateField(idx, 'formulaUnit', 'm³');
+                                      } else if (val.includes('單價')) {
+                                        updateField(idx, 'formulaUnit', '元');
+                                      }
+                                    }
+                                  }}
+                                  style={{ width: '80px', padding: '4px', borderRadius: '4px', backgroundColor: 'rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '9px', outline: 'none' }}
+                                  defaultValue=""
+                                >
+                                  <option value="">-- 常用公式 --</option>
+                                  <option value="{長度} * {寬度} * {高度}">長*寬*高 (體積)</option>
+                                  <option value="{數量} * {單價}">數量*單價 (總價)</option>
+                                  <option value="{欄位A} + {欄位B}">相加 (A + B)</option>
+                                  <option value="{欄位A} - {欄位B}">相減 (A - B)</option>
+                                  <option value="{欄位A} * {欄位B}">相乘 (A * B)</option>
+                                  <option value="({欄位A} + {欄位B}) / 2">平均值</option>
+                                </select>
                                 <input
                                   type="text"
                                   value={field.formulaExpression || ''}
