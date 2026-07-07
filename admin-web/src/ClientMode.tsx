@@ -154,6 +154,93 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates, token })
       .catch(console.error);
   }, []);
 
+  // Dynamically calculate formula values
+  React.useEffect(() => {
+    if (!clientTemplate) return;
+    const fieldsList = clientTemplate.config.fields || [];
+    const formulaFields = fieldsList.filter((f: any) => f.type === 'formula');
+    if (formulaFields.length === 0) return;
+
+    let hasChanges = false;
+    const newFormData = { ...clientFormData };
+
+    const parseRange = (rangeStr: string) => {
+      const parts = rangeStr.split('!');
+      if (parts.length !== 2) return null;
+      const cell = parts[1].replace(/\$/g, '');
+      const match = cell.match(/^([A-Z]+)(\d+)$/i);
+      if (!match) return null;
+      return { col: match[1].toUpperCase(), row: parseInt(match[2], 10) };
+    };
+
+    formulaFields.forEach((f: any) => {
+      const expr = f.formulaExpression;
+      if (!expr) return;
+
+      const fDetails = parseRange(f.rangeStr);
+      const isTableRow = fDetails && clientTemplate.config.tableListConfig && 
+                         fDetails.row >= clientTemplate.config.tableListConfig.startRow && 
+                         fDetails.row <= clientTemplate.config.tableListConfig.endRow;
+
+      // Find placeholders e.g., {長度}
+      const matches = expr.match(/\{[^{}]+\}/g);
+      let evaluatedExpr = expr;
+
+      if (matches) {
+        matches.forEach((m: string) => {
+          const varLabel = m.slice(1, -1).trim(); // Remove { and }
+          
+          // Find the source field that matches this label
+          const sourceField = fieldsList.find((sf: any) => {
+            const sfDetails = parseRange(sf.rangeStr);
+            const sfIsTableRow = sfDetails && clientTemplate.config.tableListConfig && 
+                                 sfDetails.row >= clientTemplate.config.tableListConfig.startRow && 
+                                 sfDetails.row <= clientTemplate.config.tableListConfig.endRow;
+
+            const sfCleanLabel = sf.label.replace(/^項次 \d+ - /, '').trim();
+            const labelMatches = sfCleanLabel === varLabel || sf.label.trim() === varLabel;
+
+            if (isTableRow && sfIsTableRow) {
+              // Both are in the table: MUST match same row index
+              return labelMatches && sfDetails.row === fDetails.row;
+            } else {
+              // Otherwise, just match global label
+              return labelMatches;
+            }
+          });
+
+          const val = sourceField ? parseFloat(clientFormData[sourceField.name] || '0') : 0;
+          evaluatedExpr = evaluatedExpr.replace(m, isNaN(val) ? '0' : String(val));
+        });
+      }
+
+      // Safely evaluate math expression
+      let result = 0;
+      try {
+        const sanitized = evaluatedExpr.replace(/[^0-9+\-*/().\s]/g, '');
+        result = sanitized ? new Function(`return (${sanitized})`)() : 0;
+      } catch (e) {
+        result = 0;
+      }
+
+      if (isNaN(result) || !isFinite(result)) {
+        result = 0;
+      }
+
+      // Format result (round to 4 decimal places)
+      const formattedResult = String(Math.round(result * 10000) / 10000);
+
+      if (clientFormData[f.name] !== formattedResult) {
+        newFormData[f.name] = formattedResult;
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      setClientFormData(newFormData);
+    }
+  }, [clientFormData, clientTemplate]);
+
   const parseRangeDetails = (rangeStr: string) => {
     const parts = rangeStr.split('!');
     if (parts.length !== 2) return null;
@@ -219,6 +306,22 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates, token })
             />
             <span style={{ color: '#fff', fontSize: '16px' }}>{t.confirmCheck}</span>
           </label>
+        )}
+        
+        {field.type === 'formula' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+            <input 
+              type="text" 
+              readOnly
+              value={clientFormData[field.name] || '0'}
+              style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#a78bfa', fontSize: '16px', fontWeight: 'bold', outline: 'none', flex: 1, boxSizing: 'border-box', cursor: 'not-allowed' }}
+            />
+            {field.formulaUnit && (
+              <span style={{ color: '#a78bfa', fontSize: '15px', fontWeight: 'bold', background: 'rgba(139, 92, 246, 0.1)', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                {field.formulaUnit}
+              </span>
+            )}
+          </div>
         )}
         
         {(field.type === 'image' || field.type === 'signature') && (
