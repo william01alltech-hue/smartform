@@ -16,14 +16,15 @@ import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 class DynamicFormScreen extends StatefulWidget {
   final Map formConfig;
   final String templatePath;
-
   final String templateId;
+  final Map? draftData; // 新增：草稿暫存資料
 
   const DynamicFormScreen({
     super.key,
     required this.formConfig,
     required this.templatePath,
     required this.templateId,
+    this.draftData, // 新增
   });
 
   @override
@@ -43,6 +44,11 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // 取得暫存草稿中的文字欄位與圖片欄位資料
+    final Map draftFields = widget.draftData?['fields'] as Map? ?? {};
+    final Map draftImages = widget.draftData?['images'] as Map? ?? {};
+
     // Initialize state containers based on fields config
     final List fields = widget.formConfig['fields'] ?? [];
     for (var field in fields) {
@@ -50,24 +56,35 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
       final String type = field['type'];
 
       if (type == 'text' || type == 'number' || type == 'date' || type == 'mobile' || type == 'tel') {
-        _controllers[name] = TextEditingController();
+        final draftVal = draftFields[name]?.toString() ?? '';
+        _controllers[name] = TextEditingController(text: draftVal);
         if (type == 'mobile') {
           _formatters[name] = MaskTextInputFormatter(
+            initialText: draftVal,
             mask: '####-######',
             filter: { "#": RegExp(r'[0-9]') },
             type: MaskAutoCompletionType.lazy,
           );
         } else if (type == 'tel') {
           _formatters[name] = MaskTextInputFormatter(
+            initialText: draftVal,
             mask: '(##)########',
             filter: { "#": RegExp(r'[0-9]') },
             type: MaskAutoCompletionType.lazy,
           );
         }
       } else if (type == 'checkbox') {
-        _checkboxValues[name] = false;
+        _checkboxValues[name] = draftFields[name]?.toString() == 'true';
       } else if (type == 'signature') {
         _signaturePoints[name] = [];
+        if (draftImages.containsKey(name) && draftImages[name]?.toString().isNotEmpty == true) {
+          _imagePaths[name] = draftImages[name].toString();
+        }
+      } else if (type == 'image') {
+        if (draftImages.containsKey(name) && draftImages[name]?.toString().isNotEmpty == true) {
+          _imagePaths[name] = draftImages[name].toString();
+          _imageInfo[name] = '已載入暫存圖片';
+        }
       }
     }
   }
@@ -203,7 +220,8 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
 
   void _saveLocalDraft() async {
     final l10n = AppLocalizations.of(context)!;
-    final draftId = DateTime.now().millisecondsSinceEpoch.toString();
+    // 如果已有草稿 ID 則沿用（覆蓋暫存），否則建立新 ID
+    final draftId = widget.draftData?['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
     
     await _processSignatures();
 
@@ -214,7 +232,10 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
 
     final draft = {
       'id': draftId,
-      'title': '工地表單草稿 $draftId',
+      'templateId': widget.templateId,
+      'templatePath': widget.templatePath,
+      'formConfig': widget.formConfig,
+      'title': widget.draftData?['title'] ?? '工地表單草稿 $draftId',
       'createdTime': DateTime.now().toIso8601String(),
       'fields': textData,
       'images': _imagePaths,
@@ -303,6 +324,11 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
       // Call JS Worker (Mocking the base64 passing for architecture completeness)
       await ExcelWebService.fillTemplateWeb('mock_base64_template', textData, _imagePaths);
       
+      // 成功提交後刪除對應的暫存草稿
+      if (widget.draftData != null) {
+        await OfflineService.deleteDraft(widget.draftData!['id'] as String);
+      }
+      
       setState(() => _isExporting = false);
       if (!mounted) return;
       
@@ -329,6 +355,12 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     };
 
     await OfflineService.enqueueSubmission(draftId, payload);
+    
+    // 成功提交後刪除對應的暫存草稿
+    if (widget.draftData != null) {
+      await OfflineService.deleteDraft(widget.draftData!['id'] as String);
+    }
+    
     SyncService().triggerSync();
     
     setState(() => _isExporting = false);
@@ -601,6 +633,8 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
                   );
                 } else if (type == 'signature') {
                   final points = _signaturePoints[name] ?? [];
+                  final savedSignaturePath = _imagePaths[name];
+                  
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 20),
                     child: Column(
@@ -618,6 +652,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
                               onPressed: () {
                                 setState(() {
                                   _signaturePoints[name] = [];
+                                  _imagePaths.remove(name);
                                 });
                               },
                               icon: const Icon(Icons.clear, size: 16, color: Colors.redAccent),
@@ -628,23 +663,54 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
                         const SizedBox(height: 8),
                         Container(
                           height: 180,
+                          width: double.infinity,
                           decoration: BoxDecoration(
                             color: const Color(0xFF1E293B),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: points.isEmpty ? Colors.white24 : Colors.amber.withValues(alpha: 0.5),
+                              color: (points.isEmpty && (savedSignaturePath == null || savedSignaturePath.isEmpty))
+                                  ? Colors.white24
+                                  : Colors.amber.withValues(alpha: 0.5),
                               width: 2,
                             ),
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(14),
-                            child: SignatureCanvas(
-                              onPointsChanged: (newPoints) {
-                                setState(() {
-                                  _signaturePoints[name] = List.from(newPoints);
-                                });
-                              },
-                            ),
+                            child: (savedSignaturePath != null && savedSignaturePath.isNotEmpty && points.isEmpty)
+                                ? Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      kIsWeb
+                                          ? Image.network(savedSignaturePath, fit: BoxFit.contain)
+                                          : Image.file(File(savedSignaturePath), fit: BoxFit.contain),
+                                      Positioned(
+                                        right: 8,
+                                        bottom: 8,
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            setState(() {
+                                              _imagePaths.remove(name);
+                                              _signaturePoints[name] = [];
+                                            });
+                                          },
+                                          icon: const Icon(Icons.edit, size: 14),
+                                          label: const Text('重簽', style: TextStyle(fontSize: 12)),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.black45,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : SignatureCanvas(
+                                    onPointsChanged: (newPoints) {
+                                      setState(() {
+                                        _signaturePoints[name] = List.from(newPoints);
+                                      });
+                                    },
+                                  ),
                           ),
                         ),
                       ],

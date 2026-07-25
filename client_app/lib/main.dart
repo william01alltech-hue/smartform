@@ -507,6 +507,110 @@ class _MyHomePageState extends State<MyHomePage> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
+                      onTap: () {
+                        final templateId = draft['templateId'] as String? ?? 'local_default';
+                        var templatePath = draft['templatePath'] as String? ?? '';
+                        var formConfig = draft['formConfig'] as Map? ?? const {};
+                        
+                        if (formConfig.isEmpty) {
+                          if (templateId == 'local_default') {
+                            templatePath = "/Users/william/Desktop/個人資料.xlsx";
+                            formConfig = const {
+                              "title": "工地表單檢驗",
+                              "fields": [
+                                {
+                                  "name": "name",
+                                  "type": "text",
+                                  "label": "姓名",
+                                  "sheetName": "工作表2",
+                                  "rangeStr": "工作表2!\$B\$2",
+                                  "widthPx": 360,
+                                  "heightPx": 60,
+                                  "aspectRatio": 1.3333,
+                                  "resolutionTag": "medium",
+                                  "required": true
+                                },
+                                {
+                                  "name": "birthday",
+                                  "type": "date",
+                                  "label": "生日",
+                                  "sheetName": "工作表2",
+                                  "rangeStr": "工作表2!\$B\$3",
+                                  "widthPx": 360,
+                                  "heightPx": 60,
+                                  "aspectRatio": 1.3333,
+                                  "resolutionTag": "medium",
+                                  "required": true
+                                },
+                                {
+                                  "name": "phone",
+                                  "type": "tel",
+                                  "label": "電話",
+                                  "sheetName": "工作表2",
+                                  "rangeStr": "工作表2!\$B\$4",
+                                  "widthPx": 360,
+                                  "heightPx": 60,
+                                  "aspectRatio": 1.3333,
+                                  "resolutionTag": "medium",
+                                  "required": true
+                                },
+                                {
+                                  "name": "mobile",
+                                  "type": "mobile",
+                                  "label": "手機",
+                                  "sheetName": "工作表2",
+                                  "rangeStr": "工作表2!\$B\$6",
+                                  "widthPx": 360,
+                                  "heightPx": 60,
+                                  "aspectRatio": 1.3333,
+                                  "resolutionTag": "medium",
+                                  "required": true
+                                },
+                                {
+                                  "name": "photo 1",
+                                  "type": "image",
+                                  "label": "相片",
+                                  "sheetName": "工作表2",
+                                  "rangeStr": "工作表2!\$B\$5",
+                                  "widthPx": 360,
+                                  "heightPx": 60,
+                                  "aspectRatio": 1.3333,
+                                  "resolutionTag": "medium",
+                                  "required": true
+                                }
+                              ]
+                            };
+                          } else {
+                            final synced = OfflineService.getSyncedTemplates();
+                            final matched = synced.firstWhere(
+                              (t) => t['id']?.toString() == templateId,
+                              orElse: () => {},
+                            );
+                            if (matched.isNotEmpty && matched['config'] != null) {
+                              formConfig = matched['config'] as Map;
+                              templatePath = matched['localExcelPath'] as String? ?? '';
+                            }
+                          }
+                        }
+                        
+                        if (formConfig.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('找不到此草稿對應的範本配置，無法開啟。'), backgroundColor: Colors.redAccent)
+                          );
+                          return;
+                        }
+
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => DynamicFormScreen(
+                              formConfig: Map<String, dynamic>.from(formConfig),
+                              templatePath: templatePath,
+                              templateId: templateId,
+                              draftData: draft,
+                            ),
+                          ),
+                        ).then((_) => _refreshSyncData());
+                      },
                       leading: CircleAvatar(
                         backgroundColor: primaryColor.withValues(alpha: 0.2),
                         child: Icon(Icons.edit, color: primaryColor),
