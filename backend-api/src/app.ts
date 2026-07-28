@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { db } from './db';
 import puppeteer from 'puppeteer';
 import path from 'path';
+import { isS3Configured, uploadToS3, getPresignedDownloadUrl, getS3ObjectBuffer } from './s3';
 
 // --- Utility Functions ---
 function escapeHtml(unsafe: string): string {
@@ -333,14 +334,24 @@ app.post(
       const parsedPages = pages ? parseInt(pages, 10) : 1;
 
       const templateId = uuidv4();
+      let s3Key: string | undefined = undefined;
+      let excelBase64: Buffer | undefined = req.file.buffer;
+
+      if (isS3Configured) {
+        s3Key = `templates/${tokenInfo.masterToken}/${templateId}.xlsx`;
+        await uploadToS3(s3Key, req.file.buffer, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        excelBase64 = undefined; // Do not store in SQLite if we have S3
+      }
+
       const saved = await db.saveTemplate(
         tokenInfo.token,
         templateId,
         title || '未命名範本',
         parsedConfig,
-        req.file.buffer,
+        excelBase64,
         folder || '',
-        parsedPages
+        parsedPages,
+        s3Key
       );
 
       res.json({ success: true, templateId: saved.id });
@@ -462,7 +473,12 @@ app.get('/api/templates/:id/excel', verifyToken(), async (req: express.Request, 
     }
   }
 
-  const excelBuffer = Buffer.from(template.excelBase64, 'base64');
+  let excelBuffer: Buffer;
+  if (template.s3Key && isS3Configured) {
+    excelBuffer = await getS3ObjectBuffer(template.s3Key);
+  } else {
+    excelBuffer = Buffer.from(template.excelBase64 || '', 'base64');
+  }
 
   res.setHeader(
     'Content-Type',
@@ -671,7 +687,13 @@ app.post(
         }
       }
       
-      const templateBuffer = Buffer.from(template.excelBase64, 'base64');
+      let templateBuffer: Buffer;
+      if (template.s3Key && isS3Configured) {
+        templateBuffer = await getS3ObjectBuffer(template.s3Key);
+      } else {
+        templateBuffer = Buffer.from(template.excelBase64 || '', 'base64');
+      }
+
       const files = req.files as Express.Multer.File[] || [];
 
       // Parse JSON data payload
@@ -698,6 +720,7 @@ app.post(
       const targetFolderId = req.body.folderId || null;
       const targetFilename = req.body.filename || `compiled_${templateId}`;
       let generatedBase64 = '';
+      let finalBuffer: Buffer;
 
       if (format === 'pdf') {
         // Generate a beautiful HTML report and convert to PDF using Puppeteer
@@ -764,14 +787,14 @@ app.post(
           page.setDefaultNavigationTimeout(30000);
           await page.setContent(htmlContent, { waitUntil: 'domcontentloaded', timeout: 30000 });
           
-          const pdfBuffer = await page.pdf({
+          finalBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
             margin: { top: '20mm', right: '20mm', bottom: '20mm', left: '20mm' },
             timeout: 30000
           });
 
-          generatedBase64 = Buffer.from(pdfBuffer).toString('base64');
+          generatedBase64 = Buffer.from(finalBuffer).toString('base64');
           
           // 扣除點數 (確保在傳送檔案前扣除成功)
           if (!isUnlimited) {
@@ -784,7 +807,7 @@ app.post(
 
           res.setHeader('Content-Type', 'application/pdf');
           res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(targetFilename)}.pdf"`);
-          res.send(pdfBuffer);
+          res.send(finalBuffer);
         } finally {
           if (browser) {
             await browser.close().catch((err: any) => console.error('Error closing Puppeteer browser:', err));
@@ -792,14 +815,14 @@ app.post(
         }
       } else {
         // Default Excel format
-        const outputBuffer = await ExcelService.fillTemplate(
+        finalBuffer = await ExcelService.fillTemplate(
           templateBuffer,
           data,
           imageBuffers,
           template.config.fields
         );
 
-        generatedBase64 = outputBuffer.toString('base64');
+        generatedBase64 = finalBuffer.toString('base64');
         
         // 扣除點數 (確保在傳送檔案前扣除成功)
         if (!isUnlimited) {
@@ -818,14 +841,24 @@ app.post(
           'Content-Disposition',
           `attachment; filename="${encodeURIComponent(targetFilename)}.xlsx"`
         );
-        res.send(outputBuffer);
+        res.send(finalBuffer);
       }
 
       // Save to ExportedFiles if folderId is provided
       if (targetFolderId) {
         const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
         const masterToken = tokenInfo.role === 'master' ? tokenInfo.token : (tokenInfo.masterToken || '');
-        await db.saveExportedFile(fileId, masterToken, targetFolderId, targetFilename, format, generatedBase64);
+        let s3Key: string | undefined = undefined;
+        let base64ToSave: string | undefined = generatedBase64;
+        
+        if (isS3Configured && finalBuffer) {
+          s3Key = `exports/${masterToken}/${fileId}.${format}`;
+          const mime = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+          await uploadToS3(s3Key, finalBuffer, mime);
+          base64ToSave = undefined; // Do not store in SQLite
+        }
+        
+        await db.saveExportedFile(fileId, masterToken, targetFolderId, targetFilename, format, base64ToSave, s3Key);
       }
     } catch (err: any) {
       console.error('Error exporting web template:', err);
@@ -932,7 +965,16 @@ app.get('/api/exported-files/preview/:id', async (req: express.Request, res: exp
     }
 
     if (file.format === 'xlsx') {
-      const buffer = Buffer.from(file.dataBase64, 'base64');
+      let buffer: Buffer;
+      if (file.s3Key && isS3Configured) {
+        buffer = await getS3ObjectBuffer(file.s3Key);
+      } else if (file.dataBase64) {
+        buffer = Buffer.from(file.dataBase64, 'base64');
+      } else {
+        res.status(404).json({ error: 'File content missing' });
+        return;
+      }
+      
       const parsed = await ExcelService.parseTemplate(buffer);
       res.json({ visualSheets: parsed.visualSheets });
     } else {
@@ -946,12 +988,16 @@ app.get('/api/exported-files/preview/:id', async (req: express.Request, res: exp
 app.get('/api/exported-files/download/:id', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const tokenStr = authHeader && authHeader.startsWith('Bearer ') 
+      ? authHeader.split(' ')[1] 
+      : (req.query.token as string);
+      
+    if (!tokenStr) {
       res.status(401).json({ error: 'Missing or invalid token' });
       return;
     }
-    const token = authHeader.split(' ')[1];
-    const tokenInfo = await db.getToken(token);
+    
+    const tokenInfo = await db.getToken(tokenStr);
     if (!tokenInfo) {
       res.status(401).json({ error: 'Invalid token' });
       return;
@@ -963,10 +1009,18 @@ app.get('/api/exported-files/download/:id', async (req: express.Request, res: ex
       return;
     }
 
-    const buffer = Buffer.from(file.dataBase64, 'base64');
-    res.setHeader('Content-Type', file.format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.filename)}.${file.format}"`);
-    res.send(buffer);
+    if (file.s3Key && isS3Configured) {
+      const url = await getPresignedDownloadUrl(file.s3Key);
+      res.redirect(url);
+      return;
+    } else if (file.dataBase64) {
+      const buffer = Buffer.from(file.dataBase64, 'base64');
+      res.setHeader('Content-Type', file.format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.filename)}.${file.format}"`);
+      res.send(buffer);
+    } else {
+      res.status(404).json({ error: 'File content missing' });
+    }
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

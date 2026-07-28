@@ -23,7 +23,8 @@ export interface ExportedFile {
   folderId: string;
   filename: string;
   format: string;
-  dataBase64: string;
+  dataBase64?: string; // Legacy
+  s3Key?: string;      // New for R2
   createdAt: string;
 }
 
@@ -58,12 +59,13 @@ export interface TokenInfo {
   memberName?: string;
 }
 
-interface TemplateInfo {
+export interface TemplateInfo {
   id: string;
   masterToken: string;
   title: string;
   config: any;
-  excelBase64: string;
+  excelBase64?: string; // Legacy
+  s3Key?: string;       // New for R2
   updatedAt: string;
   folder?: string;
   pages?: number;
@@ -100,7 +102,8 @@ class SQLiteDatabase {
         folderId TEXT NOT NULL,
         filename TEXT NOT NULL,
         format TEXT NOT NULL,
-        dataBase64 TEXT NOT NULL,
+        dataBase64 TEXT,
+        s3Key TEXT,
         createdAt TEXT NOT NULL
       );
     `);
@@ -223,11 +226,11 @@ class SQLiteDatabase {
     }));
   }
 
-  public async saveExportedFile(id: string, masterToken: string, folderId: string, filename: string, format: string, dataBase64: string): Promise<ExportedFile> {
-    const file: ExportedFile = { id, masterToken, folderId, filename, format, dataBase64, createdAt: new Date().toISOString() };
+  public async saveExportedFile(id: string, masterToken: string, folderId: string, filename: string, format: string, dataBase64: string | undefined, s3Key?: string): Promise<ExportedFile> {
+    const file: ExportedFile = { id, masterToken, folderId, filename, format, dataBase64, s3Key, createdAt: new Date().toISOString() };
     await client.execute({
-      sql: 'INSERT INTO exported_files (id, masterToken, folderId, filename, format, dataBase64, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      args: [id, masterToken, folderId, filename, format, dataBase64, file.createdAt]
+      sql: 'INSERT INTO exported_files (id, masterToken, folderId, filename, format, dataBase64, s3Key, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      args: [id, masterToken, folderId, filename, format, dataBase64 || null, s3Key || null, file.createdAt]
     });
     return file;
   }
@@ -249,7 +252,7 @@ class SQLiteDatabase {
 
   public async getExportedFileById(id: string): Promise<ExportedFile | undefined> {
     const res = await client.execute({
-      sql: 'SELECT * FROM exported_files WHERE id = ?',
+      sql: 'SELECT id, masterToken, folderId, filename, format, dataBase64, s3Key, createdAt FROM exported_files WHERE id = ?',
       args: [id]
     });
     if (res.rows.length === 0) return undefined;
@@ -260,7 +263,8 @@ class SQLiteDatabase {
       folderId: r.folderId as string,
       filename: r.filename as string,
       format: r.format as string,
-      dataBase64: r.dataBase64 as string,
+      dataBase64: r.dataBase64 as string | undefined,
+      s3Key: r.s3Key as string | undefined,
       createdAt: r.createdAt as string
     };
   }
@@ -544,19 +548,24 @@ class SQLiteDatabase {
     return templates;
   }
 
-  public async saveTemplate(masterToken: string, templateId: string, title: string, config: any, excelBase64: string | Buffer, folder?: string, pages?: number): Promise<TemplateInfo> {
+  public async saveTemplate(masterToken: string, templateId: string, title: string, config: any, excelBase64: string | Buffer | undefined, folder?: string, pages?: number, s3Key?: string): Promise<TemplateInfo> {
     const existing = await this.getTemplate(templateId);
-    const base64Str = Buffer.isBuffer(excelBase64) ? excelBase64.toString('base64') : excelBase64;
+    let base64Str: string | undefined = undefined;
+    if (excelBase64) {
+      base64Str = Buffer.isBuffer(excelBase64) ? excelBase64.toString('base64') : excelBase64;
+    }
     
     const tmpl: TemplateInfo = existing ? {
       ...existing,
-      title, config, excelBase64: base64Str,
+      title, config, excelBase64: base64Str || existing.excelBase64,
+      s3Key: s3Key || existing.s3Key,
       updatedAt: new Date().toISOString(),
       folder: folder ?? existing.folder,
       pages: pages ?? existing.pages
     } : {
       id: templateId,
       masterToken, title, config, excelBase64: base64Str,
+      s3Key,
       updatedAt: new Date().toISOString(),
       folder,
       pages: pages ?? 1
