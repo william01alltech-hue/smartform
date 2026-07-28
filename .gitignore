@@ -1,11 +1,37 @@
+# Dependencies
 node_modules/
-dist/
-*.sqlite
-*.sqlite-*
-.env
-node_modules/
+
+# Build outputs
 dist/
 build/
+
+# SQLite databases (never commit local DB)
+*.sqlite
+*.sqlite-*
+*.db
+
+# Environment variables - ALL variants (#57)
+.env
+.env.*
+*.env
+*.env.*
+.env.local
+.env.production
+.env.vercel
+.env.prod.real
+
+# Sensitive data files (#59)
+db.json
+
+# Development/maintenance scripts (one-off patching scripts, not part of app)
+upgrade_token.js
+patch_*.js
+patch_*.py
+fix_*.js
+move_*.py
+update_*.py
+
+# Flutter
 .dart_tool/
 .flutter-plugins-dependencies
 .packages
@@ -14,6 +40,7 @@ build/
 android/app/build/
 ios/Pods/
 ios/.symlinks/
-*.sqlite
-*.sqlite-*
-.env
+
+# Test outputs
+test_output.xlsx
+*.test.log

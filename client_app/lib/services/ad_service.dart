@@ -9,15 +9,37 @@ class AdService {
     await MobileAds.instance.initialize();
   }
 
+  // ⚠️ 正式發布前必須透過 --dart-define 傳入正式廣告 ID (#63)
+  // 範例 (build 指令)：
+  //   flutter build apk \
+  //     --dart-define=AD_BANNER_ANDROID=ca-app-pub-xxxxxxxxxx/xxxxxxxxxx \
+  //     --dart-define=AD_BANNER_IOS=ca-app-pub-xxxxxxxxxx/xxxxxxxxxx \
+  //     --dart-define=AD_REWARD_ANDROID=ca-app-pub-xxxxxxxxxx/xxxxxxxxxx \
+  //     --dart-define=AD_REWARD_IOS=ca-app-pub-xxxxxxxxxx/xxxxxxxxxx
+  // 未傳入時 release build 回傳空字串，廣告不顯示但不崩潰。
   static String get bannerAdUnitId {
-    if (Platform.isAndroid) return 'ca-app-pub-3940256099942544/6300978111'; // Test ID
-    if (Platform.isIOS) return 'ca-app-pub-3940256099942544/2934735716'; // Test ID
+    if (kDebugMode) {
+      // Debug 模式：使用 Google 官方測試 ID
+      if (Platform.isAndroid) return 'ca-app-pub-3940256099942544/6300978111';
+      if (Platform.isIOS) return 'ca-app-pub-3940256099942544/2934735716';
+      return '';
+    }
+    // Release 模式：必須透過 --dart-define 傳入正式 ID，defaultValue 為空字串
+    if (Platform.isAndroid) return const String.fromEnvironment('AD_BANNER_ANDROID', defaultValue: '');
+    if (Platform.isIOS) return const String.fromEnvironment('AD_BANNER_IOS', defaultValue: '');
     return '';
   }
 
   static String get rewardedAdUnitId {
-    if (Platform.isAndroid) return 'ca-app-pub-3940256099942544/5224354917'; // Test ID
-    if (Platform.isIOS) return 'ca-app-pub-3940256099942544/1712485313'; // Test ID
+    if (kDebugMode) {
+      // Debug 模式：使用 Google 官方測試 ID
+      if (Platform.isAndroid) return 'ca-app-pub-3940256099942544/5224354917';
+      if (Platform.isIOS) return 'ca-app-pub-3940256099942544/1712485313';
+      return '';
+    }
+    // Release 模式：必須透過 --dart-define 傳入正式 ID，defaultValue 為空字串
+    if (Platform.isAndroid) return const String.fromEnvironment('AD_REWARD_ANDROID', defaultValue: '');
+    if (Platform.isIOS) return const String.fromEnvironment('AD_REWARD_IOS', defaultValue: '');
     return '';
   }
 
@@ -27,21 +49,18 @@ class AdService {
     required BuildContext context, // For web mock
   }) async {
     if (kIsWeb) {
-      // Mock for Web since google_mobile_ads does not support Rewarded Ads on Web natively here
       showDialog(
         context: context,
-        barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          title: const Text('觀看廣告中...'),
-          content: const Text('這是一個模擬的獎勵式影片廣告。在真實的手機上，這裡會播放影片。'),
+          title: const Text('無法播放廣告'),
+          content: const Text('為了維護系統公平性，獎勵廣告點數功能僅支援在 iOS 與 Android 行動裝置上進行。'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
-                onUserEarnedReward();
                 onAdClosed();
               },
-              child: const Text('看完並領取點數'),
+              child: const Text('確定'),
             ),
           ],
         ),

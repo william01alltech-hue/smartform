@@ -7,10 +7,24 @@ import { db } from '../db';
  */
 export function verifyToken(requiredRole?: 'master' | 'member') {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const token = (req.headers.authorization || req.body.token) as string | undefined;
+    if (req.method === 'OPTIONS') {
+      return next();
+    }
+
+    let token = req.headers.authorization as string | undefined;
     if (!token) {
       return res.status(401).json({ error: 'Token required' });
     }
+    
+    // 剔除 Bearer 前綴
+    if (token.startsWith('Bearer ')) {
+      token = token.split(' ')[1];
+    }
+
+    if (!token) {
+      return res.status(401).json({ error: 'Invalid Authorization header format' });
+    }
+
     const tokenInfo = await db.getToken(token);
     if (!tokenInfo) {
       return res.status(404).json({ error: 'Invalid token' });

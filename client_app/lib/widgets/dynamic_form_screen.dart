@@ -136,14 +136,14 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   }
 
   // Handle Photo Picker & Cropper & Compress flow
-  Future<void> _pickAndProcessImage(Map field) async {
+  Future<void> _pickAndProcessImage(Map field, ImageSource source) async {
     final l10n = AppLocalizations.of(context)!;
     final String fieldName = field['name'];
     final double aspectRatio = (field['aspectRatio'] as num).toDouble();
     final String resolutionTag = field['resolutionTag'] ?? 'medium';
 
     try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+      final XFile? image = await _picker.pickImage(source: source);
       if (image == null) return;
       if (!mounted) return;
 
@@ -278,29 +278,33 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
 
     setState(() => _isExporting = true);
 
-    // 🔥 1. 匯出前呼叫後端扣除 1 點
-    final consumeResult = await ApiService.consumePoints(1);
-    if (consumeResult['success'] != true) {
-      setState(() => _isExporting = false);
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: const Color(0xFF1E293B),
-          title: const Text('💰 點數不足', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: const Text(
-            '您需要 1 點才能匯出此報表。\n請回到帳號面板觀看廣告獲取點數，或購買擴充包/升級企業版。',
-            style: TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx), 
-              child: const Text('我知道了', style: TextStyle(color: Colors.amberAccent))
+    // 檢查點數餘額 (僅提示，不由前端發送扣點請求)
+    final token = OfflineService.getUserToken();
+    if (token != null) {
+      final pts = await ApiService.getPointsStatus();
+      final requiredPoints = widget.formConfig['pages'] ?? 1;
+      if (pts['total'] != null && (pts['total'] as int) < requiredPoints) {
+        setState(() => _isExporting = false);
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            backgroundColor: const Color(0xFF1E293B),
+            title: const Text('💰 點數不足', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            content: Text(
+              '您需要 $requiredPoints 點才能匯出此報表。\n請回到帳號面板觀看廣告獲取點數，或購買擴充包/升級企業版。',
+              style: const TextStyle(color: Colors.white70),
             ),
-          ],
-        ),
-      );
-      return;
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx), 
+                child: const Text('我知道了', style: TextStyle(color: Colors.amberAccent))
+              ),
+            ],
+          ),
+        );
+        return;
+      }
     }
 
     final draftId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -368,7 +372,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('已扣除 1 點，並送出表單至上傳同步隊列！'),
+        content: const Text('已送出表單至上傳同步隊列！連網同步成功後始會扣除點數。'),
         backgroundColor: Theme.of(context).colorScheme.secondary,
       ),
     );
@@ -556,7 +560,37 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
                         ),
                         const SizedBox(height: 8),
                         GestureDetector(
-                          onTap: () => _pickAndProcessImage(field),
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: const Color(0xFF1E293B),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                              ),
+                              builder: (ctx) => SafeArea(
+                                child: Wrap(
+                                  children: [
+                                    ListTile(
+                                      leading: const Icon(Icons.camera_alt, color: Colors.white),
+                                      title: const Text('拍照', style: TextStyle(color: Colors.white)),
+                                      onTap: () {
+                                        Navigator.pop(ctx);
+                                        _pickAndProcessImage(field, ImageSource.camera);
+                                      },
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.photo_library, color: Colors.white),
+                                      title: const Text('從相簿選擇', style: TextStyle(color: Colors.white)),
+                                      onTap: () {
+                                        Navigator.pop(ctx);
+                                        _pickAndProcessImage(field, ImageSource.gallery);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                           child: Container(
                             height: 180,
                             decoration: BoxDecoration(
@@ -591,7 +625,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
                                       children: [
                                         kIsWeb 
                                             ? Image.network(imagePath, fit: BoxFit.cover) 
-                                            : Image.file(File(imagePath), fit: BoxFit.cover),
+                                            : Image.file(File(imagePath), fit: BoxFit.cover, cacheWidth: 300),
                                         Positioned(
                                           bottom: 0,
                                           left: 0,
@@ -615,6 +649,10 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
                                             child: IconButton(
                                               icon: const Icon(Icons.close, size: 16, color: Colors.white),
                                               onPressed: () {
+                                                // Clear image cache memory leak
+                                                if (!kIsWeb) {
+                                                  FileImage(File(imagePath)).evict();
+                                                }
                                                 setState(() {
                                                   _imagePaths.remove(name);
                                                   _imageInfo.remove(name);

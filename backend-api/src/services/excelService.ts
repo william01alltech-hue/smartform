@@ -108,6 +108,13 @@ export class ExcelService {
    * Parses an Excel template from buffer and extracts form configuration
    */
   public static async parseTemplate(buffer: Buffer): Promise<FormConfig> {
+    return Promise.race([
+      ExcelService._parseTemplateImpl(buffer),
+      new Promise<FormConfig>((_, reject) => setTimeout(() => reject(new Error('Excel parsing timeout. File may be too complex or malicious.')), 10000))
+    ]);
+  }
+
+  private static async _parseTemplateImpl(buffer: Buffer): Promise<FormConfig> {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as any);
 
@@ -429,19 +436,51 @@ export class ExcelService {
     imageBuffers: Record<string, Buffer[]>,
     customFields?: Array<{ name: string; rangeStr: string; type?: string }>
   ): Promise<Buffer> {
+    return Promise.race([
+      ExcelService._fillTemplateImpl(templateBuffer, data, imageBuffers, customFields),
+      new Promise<Buffer>((_, reject) => setTimeout(() => reject(new Error('Excel processing timeout. File may be too complex or malicious.')), 10000))
+    ]);
+  }
+
+  private static async _fillTemplateImpl(
+    templateBuffer: Buffer,
+    data: Record<string, string>,
+    imageBuffers: Record<string, Buffer[]>,
+    customFields?: Array<{ name: string; rangeStr: string; type?: string }>
+  ): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(templateBuffer as any);
 
     const elementsToProcess: Array<{ name: string; rangeStr: string; fieldConfig?: any }> = [];
 
     if (customFields && customFields.length > 0) {
-      customFields.forEach(f => {
-        elementsToProcess.push({
-          name: f.name,
-          rangeStr: f.rangeStr,
-          fieldConfig: f
+      // 過濾掉沒有 rangeStr 的 field（例如直接傳入 template.config.fields 時）
+      // 有 rangeStr 的 field 用 customFields 路徑；沒有的 fallback 到 Excel defined names
+      const fieldsWithRange = customFields.filter(f => f.rangeStr && typeof f.rangeStr === 'string');
+      
+      if (fieldsWithRange.length > 0) {
+        // 使用 customFields 路徑（有明確的 rangeStr）
+        fieldsWithRange.forEach(f => {
+          elementsToProcess.push({
+            name: f.name,
+            rangeStr: f.rangeStr,
+            fieldConfig: f
+          });
         });
-      });
+      } else {
+        // 所有 fields 都沒有 rangeStr（直接傳入 config.fields 的場景）
+        // Fallback：從 Excel definedNames 讀取，並嘗試以 field name 匹配
+        const fieldMap = new Map(customFields.map(f => [f.name, f]));
+        workbook.definedNames.model.forEach((definedName) => {
+          if (definedName.ranges && definedName.ranges.length > 0) {
+            elementsToProcess.push({
+              name: definedName.name,
+              rangeStr: definedName.ranges[0],
+              fieldConfig: fieldMap.get(definedName.name) || undefined
+            });
+          }
+        });
+      }
     } else {
       workbook.definedNames.model.forEach((definedName) => {
         if (definedName.ranges && definedName.ranges.length > 0) {

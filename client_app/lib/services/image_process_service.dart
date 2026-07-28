@@ -40,8 +40,9 @@ class ImageProcessService {
     // 4. Compress to JPEG with decreasing quality until size target is met
     int quality = 85;
     List<int> compressedBytes;
-    // Ensure file extension is safe
-    final targetPath = '${originalFile.parent.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    // Ensure file extension is safe and unique
+    final int randId = DateTime.now().microsecondsSinceEpoch + (originalPath.hashCode % 100000);
+    final targetPath = '${originalFile.parent.path}/compressed_$randId.jpg';
                                    
     do {
       compressedBytes = img.encodeJpg(decoded, quality: quality);
@@ -55,5 +56,20 @@ class ImageProcessService {
     final compressedFile = File(targetPath);
     await compressedFile.writeAsBytes(compressedBytes);
     return compressedFile.path;
+  }
+
+  /// Delete a local file (e.g. clean up compressed temp cache)
+  static Future<void> deleteLocalImage(String? path) async {
+    if (path == null || path.isEmpty) return;
+    try {
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+        // Evict from Flutter image cache as well to release memory
+        FileImage(file).evict();
+      }
+    } catch (e) {
+      // Ignore deletion errors (e.g., permission issue)
+    }
   }
 }

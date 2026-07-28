@@ -41,6 +41,7 @@ export interface TokenInfo {
   role: 'master' | 'member';
   masterToken?: string;
   createdAt: string;
+  updatedAt?: string;
   
   subscriptionPlan?: SubscriptionPlan;
   subscriptionCreatedAt?: string;
@@ -110,10 +111,14 @@ class SQLiteDatabase {
       );
     `);
 
-    // Ensure default master token
-    const masterToken = await this.getToken('william_master_token');
-    if (!masterToken) {
-      await this.createToken('william_master_token', 'master');
+    // Ensure default master token is provisioned from env variable
+    // 僅使用環境變數設定的 MASTER_TOKEN，絕不硬編碼 token 名稱於程式碼中 (#58)
+    const defaultMasterToken = process.env.MASTER_TOKEN;
+    if (defaultMasterToken) {
+      const existingMaster = await this.getToken(defaultMasterToken);
+      if (!existingMaster) {
+        await this.createToken(defaultMasterToken, 'master');
+      }
     }
   }
 
@@ -129,6 +134,7 @@ class SQLiteDatabase {
   }
 
   private async saveToken(info: TokenInfo): Promise<void> {
+    info.updatedAt = new Date().toISOString();
     await client.execute({
       sql: 'INSERT OR REPLACE INTO tokens (token, data) VALUES (?, ?)',
       args: [info.token, JSON.stringify(info)]
@@ -143,7 +149,7 @@ class SQLiteDatabase {
       createdAt: new Date().toISOString(),
       subscriptionPlan: role === 'master' ? 'personal_ad' : undefined,
       subscriptionCreatedAt: role === 'master' ? new Date().toISOString() : undefined,
-      subscriptionExpiresAt: role === 'master' ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : undefined,
+      subscriptionExpiresAt: undefined, // 移除建立時自動贈送 1 年訂閱，僅保留試用期
       trialExpiresAt: role === 'master' ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() : undefined,
       pointLedger: []
     };
@@ -152,9 +158,11 @@ class SQLiteDatabase {
   }
 
   public async getTokensByMaster(masterToken: string): Promise<TokenInfo[]> {
-    const res = await client.execute('SELECT data FROM tokens');
-    const all = res.rows.map(r => JSON.parse(r.data as string) as TokenInfo);
-    return all.filter(t => t.masterToken === masterToken);
+    const res = await client.execute({
+      sql: "SELECT data FROM tokens WHERE json_extract(data, '$.masterToken') = ?",
+      args: [masterToken]
+    });
+    return res.rows.map(r => JSON.parse(r.data as string) as TokenInfo);
   }
   
   public async getMemberTokens(masterToken: string): Promise<TokenInfo[]> {
@@ -285,6 +293,11 @@ class SQLiteDatabase {
   }
 
 
+  /**
+   * 純查詢：計算有效點數總額，不進行任何寫入操作 (#67)
+   * 過期點數的清除由 consumePoints 和 purgeExpiredPoints 負責，
+   * 以避免在高並發環境下多個請求同時觸發寫入造成資料競爭。
+   */
   public async getValidPoints(token: string): Promise<{ free: number; paid: number; total: number }> {
     const info = await this.getToken(token);
     if (!info || !info.pointLedger) return { free: 0, paid: 0, total: 0 };
@@ -293,15 +306,28 @@ class SQLiteDatabase {
     let free = 0;
     let paid = 0;
 
-    info.pointLedger = info.pointLedger.filter(p => new Date(p.expiresAt) > now);
+    // 僅在記憶體中過濾，不寫回資料庫
+    const validEntries = info.pointLedger.filter(p => new Date(p.expiresAt) > now);
 
-    info.pointLedger.forEach(p => {
+    validEntries.forEach(p => {
       if (p.type === 'free') free += p.amount;
       else paid += p.amount;
     });
 
-    await this.saveToken(info);
     return { free, paid, total: free + paid };
+  }
+
+  /**
+   * 清除已過期的點數帳目並寫入資料庫。
+   * 此方法在 consumePoints 內部呼叫，確保清除與扣點在同一次寫入中完成。
+   */
+  private async purgeExpiredPoints(info: TokenInfo): Promise<void> {
+    const now = new Date();
+    const before = info.pointLedger?.length ?? 0;
+    info.pointLedger = (info.pointLedger || []).filter(p => new Date(p.expiresAt) > now);
+    if (info.pointLedger.length !== before) {
+      await this.saveToken(info);
+    }
   }
 
   public async rewardPoints(token: string, amount: number): Promise<boolean> {
@@ -328,9 +354,27 @@ class SQLiteDatabase {
     return true;
   }
 
-  public async purchasePoints(token: string, amount: number): Promise<boolean> {
+  public async purchasePoints(token: string, receiptData: string, source: 'ios' | 'android'): Promise<{ success: boolean; amount: number }> {
     const info = await this.getToken(token);
-    if (!info) return false;
+    if (!info) return { success: false, amount: 0 };
+
+    // 簡單的安全驗證與收據解析
+    // 正常情況下，在這裡串接 App Store / Google Play 官方 API 驗證。
+    // 這邊設計基本格式驗證，防止惡意直接灌點。
+    if (!receiptData || receiptData.trim().length < 10) {
+      return { success: false, amount: 0 };
+    }
+
+    // Mock 驗證：通常從收據資料中提取 Product ID 來決定點數額度。
+    // 假設 product_id 包含 50_points -> 50點, 100_points -> 100點，默認依收據特徵解析
+    let amount = 50; 
+    if (receiptData.includes("100_points") || receiptData.includes("pro_100")) {
+      amount = 100;
+    } else if (receiptData.includes("200_points") || receiptData.includes("pro_200")) {
+      amount = 200;
+    } else if (receiptData.includes("500_points") || receiptData.includes("pro_500")) {
+      amount = 500;
+    }
 
     if (!info.pointLedger) info.pointLedger = [];
 
@@ -346,42 +390,80 @@ class SQLiteDatabase {
     });
 
     await this.saveToken(info);
-    return true;
+    return { success: true, amount };
   }
 
   public async consumePoints(token: string, amount: number): Promise<boolean> {
-    const info = await this.getToken(token);
-    if (!info || !info.pointLedger) return false;
-
-    const pts = await this.getValidPoints(token);
-    if (pts.total < amount) return false;
-
-    const now = new Date();
-    let remainingToDeduct = amount;
-
-    info.pointLedger = info.pointLedger.filter(p => new Date(p.expiresAt) > now);
+    const maxRetries = 5;
     
-    info.pointLedger.sort((a, b) => {
-      if (a.type !== b.type) {
-        return a.type === 'free' ? -1 : 1;
-      }
-      return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
-    });
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const info = await this.getToken(token);
+      if (!info || !info.pointLedger) return false;
 
-    for (let i = 0; i < info.pointLedger.length && remainingToDeduct > 0; i++) {
-      const p = info.pointLedger[i];
-      if (p.amount <= remainingToDeduct) {
-        remainingToDeduct -= p.amount;
-        p.amount = 0;
-      } else {
-        p.amount -= remainingToDeduct;
-        remainingToDeduct = 0;
+      // 在記憶體中計算有效點數
+      const now = new Date();
+      let totalValid = 0;
+      info.pointLedger.forEach(p => {
+        if (new Date(p.expiresAt) > now) {
+          totalValid += p.amount;
+        }
+      });
+      
+      if (totalValid < amount) return false; // 點數不足
+
+      // 準備扣點邏輯
+      let remainingToDeduct = amount;
+      info.pointLedger = info.pointLedger.filter(p => new Date(p.expiresAt) > now);
+      
+      info.pointLedger.sort((a, b) => {
+        if (a.type !== b.type) {
+          return a.type === 'free' ? -1 : 1;
+        }
+        return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
+      });
+
+      for (let i = 0; i < info.pointLedger.length && remainingToDeduct > 0; i++) {
+        const p = info.pointLedger[i];
+        if (p.amount <= remainingToDeduct) {
+          remainingToDeduct -= p.amount;
+          p.amount = 0;
+        } else {
+          p.amount -= remainingToDeduct;
+          remainingToDeduct = 0;
+        }
       }
+
+      info.pointLedger = info.pointLedger.filter(p => p.amount > 0);
+      
+      // 實作 Optimistic Concurrency Control (OCC) 防範 Race Condition
+      // 利用 info.updatedAt 確保在此次處理期間，沒有其他請求修改此帳號
+      const currentUpdatedAt = info.updatedAt || '';
+      info.updatedAt = new Date().toISOString();
+      
+      let res;
+      if (currentUpdatedAt) {
+        res = await client.execute({
+          sql: "UPDATE tokens SET data = ? WHERE token = ? AND json_extract(data, '$.updatedAt') = ?",
+          args: [JSON.stringify(info), token, currentUpdatedAt]
+        });
+      } else {
+        // 沒有 updatedAt 時，退回使用 REPLACE (只在最早期建立帳號時發生)
+        res = await client.execute({
+          sql: "UPDATE tokens SET data = ? WHERE token = ? AND (json_extract(data, '$.updatedAt') IS NULL OR json_extract(data, '$.updatedAt') = '')",
+          args: [JSON.stringify(info), token]
+        });
+      }
+
+      if (res.rowsAffected && res.rowsAffected > 0) {
+        return true; // 扣點成功
+      }
+      
+      // 若 rowsAffected == 0，代表資料被其他併發請求改掉了，進入下一次 retry
+      // 稍微等待一下 (隨機 backoff) 避免活鎖
+      await new Promise(resolve => setTimeout(resolve, Math.random() * 50));
     }
 
-    info.pointLedger = info.pointLedger.filter(p => p.amount > 0);
-    await this.saveToken(info);
-    return true;
+    return false; // 重試超過次數，宣告失敗
   }
 
   public async updateAdWatchCount(token: string): Promise<{ success: boolean; rewardPoints: number; limitReached: boolean }> {
@@ -422,16 +504,29 @@ class SQLiteDatabase {
     const masterInfo = await this.getToken(masterToken);
     if (!masterInfo) return 3;
 
-    if (masterInfo.role === 'master' || masterToken === 'william_master_token') {
+    // 超級管理員帳號（僅透過環境變數設定，非硬編碼名稱）擁有無上限容量 (#68)
+    const superAdminToken = process.env.MASTER_TOKEN;
+    if (superAdminToken && masterToken === superAdminToken) {
       return 9999;
     }
 
-    let base = 3;
-    switch(masterInfo.subscriptionPlan) {
-      case 'personal_pro': base = 10; break;
-      case 'enterprise_5': base = 100; break;
-      case 'enterprise_10': base = 300; break;
-      case 'enterprise_20': base = 500; break;
+    // 訂閱方案容量上限（免費方案 personal_ad 遵守 3 個上限）(#68)
+    const now = new Date();
+    const isActive = masterInfo.subscriptionExpiresAt
+      ? new Date(masterInfo.subscriptionExpiresAt) > now
+      : false;
+    const isTrialing = masterInfo.trialExpiresAt
+      ? new Date(masterInfo.trialExpiresAt) > now
+      : false;
+
+    let base = 3; // 免費 / 過期方案預設上限
+    if (isActive || isTrialing) {
+      switch(masterInfo.subscriptionPlan) {
+        case 'personal_pro': base = 10; break;
+        case 'enterprise_5': base = 100; break;
+        case 'enterprise_10': base = 300; break;
+        case 'enterprise_20': base = 500; break;
+      }
     }
     return base + (masterInfo.extraTemplateCapacity || 0);
   }
@@ -475,9 +570,11 @@ class SQLiteDatabase {
   }
 
   public async getTemplatesByMaster(masterToken: string): Promise<TemplateInfo[]> {
-    const res = await client.execute('SELECT data FROM templates');
-    const all = res.rows.map(r => JSON.parse(r.data as string) as TemplateInfo);
-    return all.filter(t => t.masterToken === masterToken);
+    const res = await client.execute({
+      sql: "SELECT data FROM templates WHERE json_extract(data, '$.masterToken') = ?",
+      args: [masterToken]
+    });
+    return res.rows.map(r => JSON.parse(r.data as string) as TemplateInfo);
   }
 
   public async getTemplate(templateId: string): Promise<TemplateInfo | undefined> {

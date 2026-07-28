@@ -151,12 +151,17 @@ class _AccountPanelState extends State<AccountPanel> with SingleTickerProviderSt
         } else if (purchaseDetails.status == PurchaseStatus.purchased ||
                    purchaseDetails.status == PurchaseStatus.restored) {
           
-          // Call our backend to actually give the user 50 points
-          final result = await ApiService.purchasePoints(50);
+          // Get local verification data (receipt payload) to send to backend validation
+          final receiptData = purchaseDetails.verificationData.localVerificationData;
+          final source = Theme.of(context).platform == TargetPlatform.iOS ? 'ios' : 'android';
+          
+          // Call our backend to actually validate receipt and grant points
+          final result = await ApiService.purchasePoints(receiptData, source);
           setState(() => _isLoading = false);
           
           if (result['success'] == true) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🎉 購買成功！獲得 50 金幣！')));
+            final int addedAmount = result['amount'] ?? 50;
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('🎉 購買成功！獲得 $addedAmount 金幣！')));
             _fetchPointsStatus();
           } else {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ 發送金幣失敗：${result['error']}')));
@@ -262,7 +267,10 @@ class _AccountPanelState extends State<AccountPanel> with SingleTickerProviderSt
 
     try {
       final baseUrl = SyncService().serverBaseUrl;
-      final response = await http.get(Uri.parse('$baseUrl/api/templates?token=$token'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/templates?token=$token'),
+        headers: {'Authorization': token},
+      );
 
       if (response.statusCode == 200) {
         final List templatesList = jsonDecode(response.body);
@@ -286,7 +294,10 @@ class _AccountPanelState extends State<AccountPanel> with SingleTickerProviderSt
               'id': id, 'title': title, 'config': config, 'folder': folder, 'localExcelPath': '',
             });
           } else {
-            final excelRes = await http.get(Uri.parse('$baseUrl/api/templates/$id/excel'));
+            final excelRes = await http.get(
+              Uri.parse('$baseUrl/api/templates/$id/excel'),
+              headers: {'Authorization': token},
+            );
             if (excelRes.statusCode == 200) {
               final localExcelPath = '${templateDir!.path}/$id.xlsx';
               final localFile = File(localExcelPath);

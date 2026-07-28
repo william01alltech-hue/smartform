@@ -8,5 +8,20 @@ services:
       mountPath: /data
       sizeGB: 1
     envVars:
-      - key: SQLITE_DB_PATH
-        value: /data/app_data.sqlite
+      # db.ts 使用 TURSO_DATABASE_URL 作為資料庫連線路徑 (#69)
+      # 本地 SQLite 模式（使用 Render 永久磁碟）：
+      - key: TURSO_DATABASE_URL
+        value: file:/data/app_data.sqlite
+      # 若改用 Turso 雲端資料庫，請設定以下兩個變數並移除上方的 file: 路徑：
+      # - key: TURSO_DATABASE_URL
+      #   value: libsql://<your-db>.turso.io
+      # - key: TURSO_AUTH_TOKEN
+      #   sync: false  # 請在 Render Dashboard 的 Environment 頁面手動填入
+
+      # 超級管理員 Token（必填，請在 Render Dashboard 設定，勿寫入此檔）
+      - key: MASTER_TOKEN
+        sync: false
+
+      # Rate Limiter 控制（正式環境保持預設 false 以啟用安全防護）
+      - key: DISABLE_RATE_LIMIT
+        value: "false"

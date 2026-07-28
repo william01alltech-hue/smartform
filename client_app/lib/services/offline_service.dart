@@ -92,14 +92,11 @@ class OfflineService {
     return _settingsBox.get('accumulated_points', defaultValue: 0) as int;
   }
 
-  static Future<void> addPoint() async {
-    final currentPoints = getAccumulatedPoints();
-    await _settingsBox.put('accumulated_points', currentPoints + 1);
-    
-    final List<String> raw = List<String>.from(_settingsBox.get('ad_watched_timestamps', defaultValue: []) ?? []);
-    raw.add(DateTime.now().toIso8601String());
-    await _settingsBox.put('ad_watched_timestamps', raw);
-  }
+  // addPoint() 已移除 (#65)：
+  // 此方法僅寫入本地 Hive 儲存，完全不呼叫後端 API，
+  // 與系統的計點邏輯（ApiService.rewardPoints() -> 後端 /api/points/reward）不一致。
+  // 正確的計點流程：account_panel.dart -> ApiService.rewardPoints() -> 後端驗證後扣點。
+  // 如需追蹤廣告觀看時間戳（用於冷卻計算），請直接使用 _cleanAndGetAdTimestamps() 內部邏輯。
 
   static List<DateTime> _cleanAndGetAdTimestamps() {
     final List<String> raw = List<String>.from(_settingsBox.get('ad_watched_timestamps', defaultValue: []) ?? []);
@@ -116,7 +113,7 @@ class OfflineService {
   static bool canWatchRewardAd() {
     final dates = _cleanAndGetAdTimestamps();
     final now = DateTime.now();
-    if (dates.length >= 12) return false;
+    if (dates.length >= 10) return false;
     if (dates.isNotEmpty) {
       final lastAd = dates.last;
       if (now.difference(lastAd).inHours < 1) return false;
@@ -127,10 +124,10 @@ class OfflineService {
   static String getAdCooldownMessage() {
     final dates = _cleanAndGetAdTimestamps();
     final now = DateTime.now();
-    if (dates.length >= 12) {
+    if (dates.length >= 10) {
       final oldestAd = dates.first;
       final timeToWait = oldestAd.add(const Duration(hours: 24)).difference(now);
-      return '已達每日上限 (12次)，請於 ${timeToWait.inHours} 小時後再試';
+      return '已達每日上限 (10次)，請於 ${timeToWait.inHours} 小時後再試';
     }
     if (dates.isNotEmpty) {
       final lastAd = dates.last;

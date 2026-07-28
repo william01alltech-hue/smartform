@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'offline_service.dart';
 
 import '../config/env.dart';
+import 'image_process_service.dart';
 
 class SyncService {
   static final SyncService _instance = SyncService._internal();
@@ -77,6 +78,10 @@ class SyncService {
       int statusCode = await _uploadForm(templateId, templatePath, dataMap, imagesMap);
       if (statusCode == 200) {
         debugPrint('Sync successful for form: $id');
+        // Clean up compressed cache files after successful upload to free device storage
+        for (final localPath in imagesMap.values) {
+          await ImageProcessService.deleteLocalImage(localPath);
+        }
         await OfflineService.dequeueSubmission(id);
       } else if (statusCode == 402) {
         debugPrint('Sync failed for form: $id. Insufficient points.');

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from './context/LanguageContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
-const MASTER_TOKEN = import.meta.env.VITE_MASTER_TOKEN || 'william_master_token';
+const MASTER_TOKEN = import.meta.env.VITE_MASTER_TOKEN || '';
 
 export const ExportManager: React.FC = () => {
+  const { t } = useLanguage();
   const [folders, setFolders] = useState<any[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<any | null>(null);
   const [files, setFiles] = useState<any[]>([]);
@@ -56,14 +58,14 @@ export const ExportManager: React.FC = () => {
     }
   }, [selectedFolder]);
 
-  const handleCreateFolder = async (e: React.FormEvent, parentId: string | null = null) => {
+  const handleCreateFolder = async (e: React.FormEvent, parentId: string | null, folderName: string) => {
     e.preventDefault();
-    if (!newFolderName.trim()) return;
+    if (!folderName.trim()) return;
     try {
       await fetch(`${API_BASE}/api/export-folders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MASTER_TOKEN}` },
-        body: JSON.stringify({ name: newFolderName, parentId })
+        body: JSON.stringify({ name: folderName, parentId })
       });
       setNewFolderName('');
       fetchFolders();
@@ -91,8 +93,11 @@ export const ExportManager: React.FC = () => {
     // Check if already open
     const existing = previewTabs.find(t => t.id === fileId);
     if (existing) {
+      // Revoke the old object URL if reloading the same tab
+      if (existing.fileUrl) {
+        URL.revokeObjectURL(existing.fileUrl);
+      }
       setActiveTabId(fileId);
-      return;
     }
 
     if (format === 'pdf') {
@@ -108,7 +113,7 @@ export const ExportManager: React.FC = () => {
             format,
             fileUrl: fileURL
           };
-          setPreviewTabs(prev => [...prev, newTab]);
+          setPreviewTabs(prev => [...prev.filter(t => t.id !== fileId), newTab]);
           setActiveTabId(fileId);
         });
     } else {
@@ -126,7 +131,7 @@ export const ExportManager: React.FC = () => {
               visualSheets: data.visualSheets,
               activeSheetIndex: 0
             };
-            setPreviewTabs(prev => [...prev, newTab]);
+            setPreviewTabs(prev => [...prev.filter(t => t.id !== fileId), newTab]);
             setActiveTabId(fileId);
           } else {
             alert('無法載入 Excel 預覽數據: ' + (data.error || '未知錯誤'));
@@ -226,23 +231,23 @@ export const ExportManager: React.FC = () => {
       <div style={{ flex: 1, minWidth: '250px', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>🗄️</span>
-          <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#fafafa' }}>匯出資料夾管理</h2>
+          <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#fafafa' }}>{t('folderTitle') || '匯出資料夾管理'}</h2>
         </div>
 
-        <form onSubmit={(e) => handleCreateFolder(e, null)} style={{ display: 'flex', gap: '8px' }}>
+        <form onSubmit={(e) => handleCreateFolder(e, null, newFolderName)} style={{ display: 'flex', gap: '8px' }}>
           <input 
             type="text" 
             value={newFolderName}
             onChange={(e) => setNewFolderName(e.target.value)}
-            placeholder="新增主資料夾名稱..."
+            placeholder={t('mainFolderPlaceholder') || '新增主資料夾名稱...'}
             style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '13px', outline: 'none' }}
           />
-          <button type="submit" style={{ padding: '8px 12px', borderRadius: '8px', background: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>新增</button>
+          <button type="submit" style={{ padding: '8px 12px', borderRadius: '8px', background: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>{t('addBtn') || '新增'}</button>
         </form>
 
         <div style={{ overflowY: 'auto', flex: 1 }}>
           {rootFolders.length === 0 ? (
-            <div style={{ color: '#71717a', fontSize: '13px', textAlign: 'center', marginTop: '20px' }}>尚未建立任何資料夾</div>
+            <div style={{ color: '#71717a', fontSize: '13px', textAlign: 'center', marginTop: '20px' }}>{t('noFolders') || '尚未建立任何資料夾'}</div>
           ) : (
             <FolderTree folderList={rootFolders} />
           )}
@@ -254,29 +259,30 @@ export const ExportManager: React.FC = () => {
         {selectedFolder ? (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, color: '#fff', fontSize: '16px' }}>📂 {selectedFolder.name} - 檔案列表</h3>
+              <h3 style={{ margin: 0, color: '#fff', fontSize: '16px' }}>📂 {selectedFolder.name} - {t('fileList') || '檔案列表'}</h3>
               
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', color: '#a1a1aa' }}>在此建立子資料夾:</span>
-                <form onSubmit={(e) => handleCreateFolder(e, selectedFolder.id)} style={{ display: 'flex', gap: '4px' }}>
+                <span style={{ fontSize: '12px', color: '#a1a1aa' }}>{t('createSubfolder') || '在此建立子資料夾:'}</span>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const input = document.getElementById('subfolder-input') as HTMLInputElement;
+                  handleCreateFolder(e, selectedFolder.id, input.value);
+                  input.value = '';
+                }} style={{ display: 'flex', gap: '4px' }}>
                   <input 
                     type="text" 
-                    placeholder="子資料夾名稱..."
+                    placeholder={t('subfolderPlaceholder') || '子資料夾名稱...'}
                     id="subfolder-input"
                     style={{ width: '120px', padding: '6px 10px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px', outline: 'none' }}
                   />
-                  <button type="button" onClick={(e) => {
-                    const input = document.getElementById('subfolder-input') as HTMLInputElement;
-                    setNewFolderName(input.value);
-                    setTimeout(() => handleCreateFolder(e, selectedFolder.id), 0);
-                  }} style={{ padding: '6px 10px', borderRadius: '6px', background: '#8b5cf6', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>新增</button>
+                  <button type="submit" style={{ padding: '6px 10px', borderRadius: '6px', background: '#8b5cf6', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>{t('addBtn') || '新增'}</button>
                 </form>
               </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1 }}>
               {files.length === 0 ? (
-                <div style={{ color: '#71717a', fontSize: '13px', textAlign: 'center', marginTop: '20px' }}>此資料夾中尚無匯出的表單檔案</div>
+                <div style={{ color: '#71717a', fontSize: '13px', textAlign: 'center', marginTop: '20px' }}>{t('noFiles') || '此資料夾中尚無匯出的表單檔案'}</div>
               ) : (
                 files.map(file => (
                   <div key={file.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>

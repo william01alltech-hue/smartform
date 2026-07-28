@@ -9,21 +9,58 @@ import { verifyToken } from './middleware/auth';
 import { z } from 'zod';
 import { db } from './db';
 import puppeteer from 'puppeteer';
+import path from 'path';
+
+// --- Utility Functions ---
+function escapeHtml(unsafe: string): string {
+  if (typeof unsafe !== 'string') return '';
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(helmet());
-app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Too many requests, please try again later.'
+app.use((req, res, next) => {
+  if (process.env.DISABLE_RATE_LIMIT === 'true') {
+    return next();
+  }
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: 'Too many requests, please try again later.'
+  })(req, res, next);
+});
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : ['http://localhost:5173', 'http://localhost:3000'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Blocked by CORS policy'));
+    }
+  },
+  credentials: true
 }));
-app.use(cors());
 app.use(express.json());
 
 // Setup memory storage for multer since we process files directly in memory
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 限制最大單檔 10MB
+    files: 20 // 最多上傳 20 個檔案，防止大量的檔案耗盡記憶體 (DoS 防禦)
+  }
+});
 
 // --- Authentication & Token Routing ---
 
@@ -44,7 +81,8 @@ app.post('/api/auth/generate-member-token', verifyToken('master'), async (req: e
   
   // 檢查是否為企業/團隊訂閱
   const masterInfo = await db.getToken(tokenInfo.token);
-  const isSuperAdmin = tokenInfo.token === 'william_master_token';
+  const defaultMasterToken = process.env.MASTER_TOKEN || 'william_master_token';
+  const isSuperAdmin = tokenInfo.token === defaultMasterToken;
   
   if (!isSuperAdmin && (!masterInfo || !masterInfo.subscriptionPlan?.startsWith('enterprise'))) {
     res.status(403).json({ error: 'Only enterprise subscriptions can generate sub-accounts. Please upgrade your plan.' });
@@ -191,6 +229,16 @@ app.get('/api/points/ledger', verifyToken(), async (req: express.Request, res: e
 
 app.post('/api/points/reward', verifyToken(), async (req: express.Request, res: express.Response) => {
   const tokenInfo = (req as any).tokenInfo;
+  
+  // 安全漏洞防護：Web 端不支援 AdMob Rewarded 廣告，檢查 tokenInfo 的來源
+  // 如果是來自 Web 模擬（比如 tokenRole 為 master 且前端環境），或沒有有效的行動裝置特徵，直接拒絕。
+  const userAgent = req.headers['user-agent'] || '';
+  const isMobile = /android|iphone|ipad|ipod/i.test(userAgent);
+  if (!isMobile) {
+    res.status(403).json({ success: false, error: 'Rewarded Ads are only supported on iOS and Android devices.' });
+    return;
+  }
+
   const result = await db.updateAdWatchCount(tokenInfo.token);
   
   if (result.success) {
@@ -205,15 +253,18 @@ app.post('/api/points/reward', verifyToken(), async (req: express.Request, res: 
 
 app.post('/api/points/purchase', verifyToken(), async (req: express.Request, res: express.Response) => {
   const tokenInfo = (req as any).tokenInfo;
-  const schema = z.object({ amount: z.number().int().positive() });
+  const schema = z.object({
+    receiptData: z.string().min(10),
+    source: z.enum(['ios', 'android'])
+  });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid amount' });
+    res.status(400).json({ error: 'Invalid receipt verification data' });
     return;
   }
   
-  const success = await db.purchasePoints(tokenInfo.token, parsed.data.amount);
-  res.json({ success });
+  const result = await db.purchasePoints(tokenInfo.token, parsed.data.receiptData, parsed.data.source);
+  res.json(result);
 });
 
 app.post('/api/points/consume', verifyToken(), async (req: express.Request, res: express.Response) => {
@@ -384,14 +435,31 @@ app.put('/api/templates/:id', async (req: express.Request, res: express.Response
   }
 });
 
-// 5. Download original Excel file for a specific template
-app.get('/api/templates/:id/excel', async (req: express.Request, res: express.Response) => {
+// 5. Download original Excel file for a specific template (Secured)
+app.get('/api/templates/:id/excel', verifyToken(), async (req: express.Request, res: express.Response) => {
   const { id } = req.params;
+  const tokenInfo = (req as any).tokenInfo;
   const template = await db.getTemplate(id);
   
   if (!template) {
     res.status(404).json({ error: 'Template not found' });
     return;
+  }
+
+  // 權限檢查：驗證模板是否屬於該 token 的 master/本身
+  const targetMaster = tokenInfo.role === 'master' ? tokenInfo.token : (tokenInfo.masterToken || '');
+  if (template.masterToken !== targetMaster) {
+    res.status(403).json({ error: 'Unauthorized to download this template' });
+    return;
+  }
+
+  // 如果是 Member，需要進一步確認該模板的 folder 是否在其 allowedFolders 清單內
+  if (tokenInfo.role === 'member' && tokenInfo.allowedFolders !== undefined) {
+    const isAllowed = template.folder && tokenInfo.allowedFolders.includes(template.folder);
+    if (!isAllowed) {
+      res.status(403).json({ error: 'Access denied: folder not allowed for this sub-account' });
+      return;
+    }
   }
 
   const excelBuffer = Buffer.from(template.excelBase64, 'base64');
@@ -412,6 +480,7 @@ app.get('/api/templates/:id/excel', async (req: express.Request, res: express.Re
 // 6. Upload and parse Excel template to generate dynamic form JSON config (Legacy Web Admin flow)
 app.post(
   '/api/templates/upload',
+  verifyToken(),
   upload.single('template'),
   async (req: express.Request, res: express.Response): Promise<void> => {
     try {
@@ -432,6 +501,7 @@ app.post(
 // 7. Fill text data and images back into Excel template and download
 app.post(
   '/api/templates/export',
+  verifyToken(),
   // Support template file and multiple images. Multer will parse everything.
   upload.any(),
   async (req: express.Request, res: express.Response): Promise<void> => {
@@ -531,43 +601,71 @@ app.post(
         return;
       }
 
+      // 權限防護校驗
+      const targetMaster = tokenInfo.role === 'master' ? tokenInfo.token : (tokenInfo.masterToken || '');
+      if (template.masterToken !== targetMaster) {
+        res.status(403).json({ error: 'Access denied: You are not authorized to export from this template' });
+        return;
+      }
+
+      // 如果是 Member，驗證 allowedFolders 是否能存取該範本的資料夾
+      if (tokenInfo.role === 'member' && tokenInfo.allowedFolders !== undefined) {
+        const isAllowed = template.folder && tokenInfo.allowedFolders.includes(template.folder);
+        if (!isAllowed) {
+          res.status(403).json({ error: 'Access denied: folder not allowed for this sub-account' });
+          return;
+        }
+      }
+
       // Check if user has unlimited access (either their own subscription, or their master's)
       let isUnlimited = false;
       const now = new Date();
+      const superAdminToken = process.env.MASTER_TOKEN;
 
-      // Master token is always unlimited
+      // Master 帳號本身：超級管理員無上限，其他 Master 需有有效訂閱嘗試
       if (tokenInfo.role === 'master') {
-        isUnlimited = true;
-      }
-
-      // Check trial period
-      if (!isUnlimited && tokenInfo.trialExpiresAt) {
-        const trialExp = new Date(tokenInfo.trialExpiresAt);
-        if (trialExp > now) isUnlimited = true;
-      }
-
-      if (!isUnlimited && tokenInfo.subscriptionPlan && tokenInfo.subscriptionPlan !== 'personal_ad') {
-        const exp = new Date(tokenInfo.subscriptionExpiresAt || 0);
-        if (exp > now) isUnlimited = true;
-      }
-
-      if (!isUnlimited && tokenInfo.role === 'member' && tokenInfo.masterToken) {
-        const masterInfo = await db.getToken(tokenInfo.masterToken);
-        if (masterInfo) {
-          // Master is always unlimited; member inherits
-          if (masterInfo.role === 'master') isUnlimited = true;
-          else if (masterInfo.subscriptionPlan && masterInfo.subscriptionPlan !== 'personal_ad') {
-            const mExp = new Date(masterInfo.subscriptionExpiresAt || 0);
-            if (mExp > now) isUnlimited = true;
+        if (superAdminToken && tokenInfo.token === superAdminToken) {
+          // 超級管理員總是吸到飽
+          isUnlimited = true;
+        } else {
+          // 一般 Master：檢查試用期
+          if (tokenInfo.trialExpiresAt && new Date(tokenInfo.trialExpiresAt) > now) {
+            isUnlimited = true;
+          }
+          // 一般 Master：檢查有效付費訂閱
+          if (!isUnlimited && tokenInfo.subscriptionPlan && tokenInfo.subscriptionPlan !== 'personal_ad') {
+            const exp = new Date(tokenInfo.subscriptionExpiresAt || 0);
+            if (exp > now) isUnlimited = true;
           }
         }
       }
 
-      // 如果沒有吃到飽權限 (個人未訂閱，或企業主帳號已過期)，則依據頁數扣除自己的點數
+      // Member 帳號：繼承 Master 的有效訂閱（#74 修復：不再因為 role==='master' 就無標準赦予吸到飽）
+      if (!isUnlimited && tokenInfo.role === 'member' && tokenInfo.masterToken) {
+        const masterInfo = await db.getToken(tokenInfo.masterToken);
+        if (masterInfo) {
+          if (superAdminToken && tokenInfo.masterToken === superAdminToken) {
+            // 超級管理員的子帳號總是吸到飽
+            isUnlimited = true;
+          } else {
+            // 檢查 Master 的試用期是否仍有效
+            if (masterInfo.trialExpiresAt && new Date(masterInfo.trialExpiresAt) > now) {
+              isUnlimited = true;
+            }
+            // 檢查 Master 是否有有效的付費方案（非免費方案）
+            if (!isUnlimited && masterInfo.subscriptionPlan && masterInfo.subscriptionPlan !== 'personal_ad') {
+              const mExp = new Date(masterInfo.subscriptionExpiresAt || 0);
+              if (mExp > now) isUnlimited = true;
+            }
+          }
+        }
+      }
+
+      // 如果沒有吸到飽權限，先檢查點數餘額
+      const requiredPoints = template.pages || 1;
       if (!isUnlimited) {
-        const requiredPoints = template.pages || 1;
-        const success = await db.consumePoints(token, requiredPoints);
-        if (!success) {
+        const pts = await db.getValidPoints(token);
+        if (pts.total < requiredPoints) {
           res.status(402).json({ error: 'Insufficient points', requiredPoints });
           return;
         }
@@ -620,7 +718,7 @@ app.post(
           </style>
         </head>
         <body>
-          <h1>${template.title || '檢驗表單報表'}</h1>
+          <h1>${escapeHtml(template.title || '檢驗表單報表')}</h1>
           <table>
             <tbody>`;
 
@@ -628,7 +726,7 @@ app.post(
         template.config.fields.forEach((field: any) => {
           if (field.type !== 'image' && field.type !== 'signature') {
             const val = data[field.name] || '無';
-            htmlContent += `<tr><th>${field.label || field.name}</th><td>${val}</td></tr>`;
+            htmlContent += `<tr><th>${escapeHtml(field.label || field.name)}</th><td>${escapeHtml(String(val))}</td></tr>`;
           }
         });
         
@@ -638,10 +736,10 @@ app.post(
             const mimeType = field.type === 'signature' ? 'image/png' : 'image/jpeg';
             const imgTags = imageBuffers[field.name].map(buf => {
               const base64Img = buf.toString('base64');
-              return `<img src="data:${mimeType};base64,${base64Img}" alt="${field.name}" style="flex: 1; max-width: calc(50% - 8px); margin: 4px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); object-fit: contain;" />`;
+              return `<img src="data:${mimeType};base64,${base64Img}" alt="${escapeHtml(field.name)}" style="flex: 1; max-width: calc(50% - 8px); margin: 4px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); object-fit: contain;" />`;
             }).join('');
             
-            htmlContent += `<tr><th>${field.label || field.name}</th><td>
+            htmlContent += `<tr><th>${escapeHtml(field.label || field.name)}</th><td>
               <div class="image-container" style="display: flex; flex-wrap: wrap; justify-content: center;">
                 ${imgTags}
               </div>
@@ -656,25 +754,42 @@ app.post(
         </body>
         </html>`;
 
-        const browser = await puppeteer.launch({
-          headless: true,
-          args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-        const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
-        
-        const pdfBuffer = await page.pdf({
-          format: 'A4',
-          printBackground: true,
-          margin: { top: '20mm', right: '20mm', bottom: '20mm', left: '20mm' }
-        });
-        
-        await browser.close();
+        let browser: any;
+        try {
+          browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+          });
+          const page = await browser.newPage();
+          page.setDefaultNavigationTimeout(30000);
+          await page.setContent(htmlContent, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          
+          const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '20mm', right: '20mm', bottom: '20mm', left: '20mm' },
+            timeout: 30000
+          });
 
-        generatedBase64 = Buffer.from(pdfBuffer).toString('base64');
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(targetFilename)}.pdf"`);
-        res.send(pdfBuffer);
+          generatedBase64 = Buffer.from(pdfBuffer).toString('base64');
+          
+          // 扣除點數 (確保在傳送檔案前扣除成功)
+          if (!isUnlimited) {
+            const success = await db.consumePoints(token, requiredPoints);
+            if (!success) {
+              res.status(402).json({ error: 'Insufficient points (consumed by concurrent request)' });
+              return;
+            }
+          }
+
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(targetFilename)}.pdf"`);
+          res.send(pdfBuffer);
+        } finally {
+          if (browser) {
+            await browser.close().catch((err: any) => console.error('Error closing Puppeteer browser:', err));
+          }
+        }
       } else {
         // Default Excel format
         const outputBuffer = await ExcelService.fillTemplate(
@@ -685,6 +800,16 @@ app.post(
         );
 
         generatedBase64 = outputBuffer.toString('base64');
+        
+        // 扣除點數 (確保在傳送檔案前扣除成功)
+        if (!isUnlimited) {
+          const success = await db.consumePoints(token, requiredPoints);
+          if (!success) {
+            res.status(402).json({ error: 'Insufficient points (consumed by concurrent request)' });
+            return;
+          }
+        }
+
         res.setHeader(
           'Content-Type',
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -786,47 +911,6 @@ app.delete('/api/export-folders/:id', async (req: express.Request, res: express.
   }
 });
 
-app.get('/api/exported-files/:folderId', async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'Missing or invalid token' });
-      return;
-    }
-    const token = authHeader.split(' ')[1];
-    const tokenInfo = await db.getToken(token);
-    if (!tokenInfo) {
-      res.status(401).json({ error: 'Invalid token' });
-      return;
-    }
-
-    const files = await db.getExportedFiles(req.params.folderId);
-    res.json(files);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.delete('/api/exported-files/:id', async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'Missing or invalid token' });
-      return;
-    }
-    const token = authHeader.split(' ')[1];
-    const tokenInfo = await db.getToken(token);
-    if (!tokenInfo || tokenInfo.role !== 'master') {
-      res.status(403).json({ error: 'Only master account can delete files' });
-      return;
-    }
-    await db.deleteExportedFile(req.params.id);
-    res.json({ success: true });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
 app.get('/api/exported-files/preview/:id', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
@@ -886,5 +970,77 @@ app.get('/api/exported-files/download/:id', async (req: express.Request, res: ex
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+});
+
+app.get('/api/exported-files/:folderId', async (req: express.Request, res: express.Response): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ error: 'Missing or invalid token' });
+      return;
+    }
+    const token = authHeader.split(' ')[1];
+    const tokenInfo = await db.getToken(token);
+    if (!tokenInfo) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const folderId = req.params.folderId;
+    
+    // 取得資料夾資訊以驗證擁有權
+    const folders = await db.getExportFolders(tokenInfo.role === 'master' ? tokenInfo.token : (tokenInfo.masterToken || ''));
+    const targetFolder = folders.find(f => f.id === folderId);
+    
+    if (!targetFolder && tokenInfo.token !== process.env.MASTER_TOKEN) {
+      // 找不到資料夾，或是該資料夾不屬於這個 Master (除了超級管理員)
+      res.status(404).json({ error: 'Folder not found' });
+      return;
+    }
+
+    if (tokenInfo.role === 'member') {
+      const allowed = tokenInfo.allowedFolders || [];
+      if (!allowed.includes(folderId)) {
+        res.status(403).json({ error: 'Access denied to this folder' });
+        return;
+      }
+    }
+
+    const files = await db.getExportedFiles(folderId);
+    res.json(files);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/exported-files/:id', async (req: express.Request, res: express.Response): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ error: 'Missing or invalid token' });
+      return;
+    }
+    const token = authHeader.split(' ')[1];
+    const tokenInfo = await db.getToken(token);
+    if (!tokenInfo || tokenInfo.role !== 'master') {
+      res.status(403).json({ error: 'Only master account can delete files' });
+      return;
+    }
+    await db.deleteExportedFile(req.params.id);
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Global error handling middleware (Catch Multer file size errors gracefully)
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      res.status(400).json({ error: 'File size limit exceeded. Max allowed size is 10MB.' });
+      return;
+    }
+  }
+  res.status(500).json({ error: 'Internal Server Error', details: err.message || err });
 });
 

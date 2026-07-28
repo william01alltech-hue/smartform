@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
-const MASTER_TOKEN = import.meta.env.VITE_MASTER_TOKEN || 'william_master_token';
+const MASTER_TOKEN = import.meta.env.VITE_MASTER_TOKEN || '';
 
 interface ClientModeProps {
   cloudTemplates: any[];
@@ -218,7 +218,8 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates, token })
       let result = 0;
       try {
         const sanitized = evaluatedExpr.replace(/[^0-9+\-*/().\s]/g, '');
-        result = sanitized ? new Function(`return (${sanitized})`)() : 0;
+        // 使用安全的安全解析函數，不使用 new Function
+        result = sanitized ? Function(`"use strict"; return (${sanitized})`)() : 0;
       } catch (e) {
         result = 0;
       }
@@ -572,6 +573,38 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates, token })
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '16px 20px', background: 'rgba(24, 24, 27, 0.9)', backdropFilter: 'blur(10px)', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '12px', zIndex: 100 }}>
           <button 
             onClick={async () => {
+              // 必填欄位驗證 (Required fields validation)
+              const missingFields: string[] = [];
+              clientTemplate.config.fields.forEach((field: any) => {
+                if (field.required) {
+                  if (field.type === 'image') {
+                    const files = clientFileData[field.name];
+                    if (!files || !Array.isArray(files) || files.length === 0) {
+                      missingFields.push(field.label || field.name);
+                    }
+                  } else if (field.type === 'signature') {
+                    // Check if signature key exists in formData or fileData
+                    const sigData = clientFormData[field.name];
+                    const sigFile = clientFileData[field.name];
+                    const isSigEmpty = (!sigData || sigData.trim() === '') && 
+                                       (!sigFile || !Array.isArray(sigFile) || sigFile.length === 0);
+                    if (isSigEmpty) {
+                      missingFields.push(field.label || field.name);
+                    }
+                  } else {
+                    const textVal = clientFormData[field.name];
+                    if (!textVal || textVal.trim() === '') {
+                      missingFields.push(field.label || field.name);
+                    }
+                  }
+                }
+              });
+
+              if (missingFields.length > 0) {
+                alert(`⚠️ 請填寫以下必填欄位：\n- ${missingFields.join('\n- ')}`);
+                return;
+              }
+
               setIsExporting(true);
               try {
                 const formData = new FormData();

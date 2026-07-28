@@ -44,13 +44,16 @@ class ApiService {
     }
   }
 
-  /// 購買點數
-  static Future<Map<String, dynamic>> purchasePoints(int amount) async {
+  /// 購買點數 (以收據驗證)
+  static Future<Map<String, dynamic>> purchasePoints(String receiptData, String source) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/points/purchase'),
         headers: _headers,
-        body: jsonEncode({'amount': amount}),
+        body: jsonEncode({
+          'receiptData': receiptData,
+          'source': source,
+        }),
       );
       return jsonDecode(response.body);
     } catch (e) {
