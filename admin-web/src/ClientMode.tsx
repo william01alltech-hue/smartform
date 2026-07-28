@@ -116,6 +116,10 @@ const translations = {
 };
 
 export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates, token }) => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlToken = urlParams.get('token');
+  const activeToken = urlToken || MASTER_TOKEN;
+
   const [lang, setLang] = useState<'zh' | 'vi' | 'id' | 'en'>(() => {
     const saved = localStorage.getItem('pwa_selected_lang');
     if (saved === 'zh' || saved === 'vi' || saved === 'id' || saved === 'en') return saved;
@@ -623,7 +627,7 @@ export const ClientMode: React.FC<ClientModeProps> = ({ cloudTemplates, token })
 
                 const res = await fetch(`${API_BASE}/api/templates/${clientTemplate.id}/export`, {
                   method: 'POST',
-                  headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` },
+                  headers: { 'Authorization': `Bearer ${activeToken}` },
                   body: formData
                 });
                 

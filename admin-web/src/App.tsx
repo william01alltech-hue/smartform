@@ -189,7 +189,7 @@ const Dashboard: React.FC = () => {
   const fetchMemberTokens = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/auth/member-tokens`, {
-        headers: { 'Authorization': MASTER_TOKEN }
+        headers: { 'Authorization': activeToken }
       });
       const data = await res.json();
       if (data.success) {
@@ -213,7 +213,7 @@ const Dashboard: React.FC = () => {
           'Content-Type': 'application/json',
           'Authorization': MASTER_TOKEN
         },
-        body: JSON.stringify({ token: MASTER_TOKEN })
+        body: JSON.stringify({ token: activeToken })
       });
       const data = await response.json();
       if (data.success) {
@@ -237,7 +237,7 @@ const Dashboard: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE}/api/auth/member-tokens/${tokenToDelete}`, {
         method: 'DELETE',
-        headers: { 'Authorization': MASTER_TOKEN }
+        headers: { 'Authorization': activeToken }
       });
       if (res.ok) {
         setMemberTokens(prev => prev.filter(t => t.token !== tokenToDelete));
@@ -260,7 +260,7 @@ const Dashboard: React.FC = () => {
     setPublishStatus('publishing...');
     const formData = new FormData();
     formData.append('template', selectedFile);
-    formData.append('token', MASTER_TOKEN);
+    formData.append('token', activeToken);
     formData.append('title', title);
     if (folder.trim()) {
       formData.append('folder', folder.trim());
@@ -305,7 +305,7 @@ const Dashboard: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE}/api/templates/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': MASTER_TOKEN }
+        headers: { 'Authorization': activeToken }
       });
       if (res.ok) {
         fetchTemplates();
@@ -619,12 +619,12 @@ const Dashboard: React.FC = () => {
                 <input
                   type="text"
                   readOnly
-                  value={MASTER_TOKEN}
+                  value={activeToken}
                   style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', backgroundColor: 'rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#a1a1aa', fontSize: '12px' }}
                 />
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(MASTER_TOKEN);
+                    navigator.clipboard.writeText(activeToken);
                     alert('已複製主帳號金鑰！可貼於手機 App 綁定。');
                   }}
                   style={{ padding: '6px 12px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', fontSize: '12px', cursor: 'pointer' }}
@@ -1659,7 +1659,7 @@ const Dashboard: React.FC = () => {
                     // 全局存取權：發送 undefined
                     const res = await fetch(`${API_BASE}/api/auth/member-tokens/${editingToken}`, {
                       method: 'PUT',
-                      headers: { 'Content-Type': 'application/json', 'Authorization': MASTER_TOKEN },
+                      headers: { 'Content-Type': 'application/json', 'Authorization': activeToken },
                       body: JSON.stringify({ allowedFolders: undefined, memberId: editingMemberId, memberName: editingMemberName })
                     });
                     if (res.ok) {
@@ -1677,7 +1677,7 @@ const Dashboard: React.FC = () => {
                     const payloadFolders = Array.from(editingFolders);
                     const res = await fetch(`${API_BASE}/api/auth/member-tokens/${editingToken}`, {
                       method: 'PUT',
-                      headers: { 'Content-Type': 'application/json', 'Authorization': MASTER_TOKEN },
+                      headers: { 'Content-Type': 'application/json', 'Authorization': activeToken },
                       body: JSON.stringify({ allowedFolders: payloadFolders, memberId: editingMemberId, memberName: editingMemberName })
                     });
                     if (res.ok) {

@@ -5,6 +5,9 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 const MASTER_TOKEN = import.meta.env.VITE_MASTER_TOKEN || '';
 
 export const ExportManager: React.FC = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlToken = urlParams.get("token");
+  const activeToken = urlToken || MASTER_TOKEN;
   const { t } = useLanguage();
   const [folders, setFolders] = useState<any[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<any | null>(null);
@@ -25,7 +28,7 @@ export const ExportManager: React.FC = () => {
   const fetchFolders = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/export-folders`, {
-        headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
+        headers: { 'Authorization': `Bearer ${activeToken}` }
       });
       const data = await res.json();
       if (Array.isArray(data)) setFolders(data);
@@ -37,7 +40,7 @@ export const ExportManager: React.FC = () => {
   const fetchFiles = async (folderId: string) => {
     try {
       const res = await fetch(`${API_BASE}/api/exported-files/${folderId}`, {
-        headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
+        headers: { 'Authorization': `Bearer ${activeToken}` }
       });
       const data = await res.json();
       if (Array.isArray(data)) setFiles(data);
@@ -64,7 +67,7 @@ export const ExportManager: React.FC = () => {
     try {
       await fetch(`${API_BASE}/api/export-folders`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MASTER_TOKEN}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeToken}` },
         body: JSON.stringify({ name: folderName, parentId })
       });
       setNewFolderName('');
@@ -77,7 +80,7 @@ export const ExportManager: React.FC = () => {
   const downloadFile = (fileId: string, filename: string, format: string) => {
     // We can fetch the file as a blob
     fetch(`${API_BASE}/api/exported-files/download/${fileId}`, {
-      headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
+      headers: { 'Authorization': `Bearer ${activeToken}` }
     })
       .then(res => res.blob())
       .then(blob => {
@@ -102,7 +105,7 @@ export const ExportManager: React.FC = () => {
 
     if (format === 'pdf') {
       fetch(`${API_BASE}/api/exported-files/download/${fileId}`, {
-        headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
+        headers: { 'Authorization': `Bearer ${activeToken}` }
       })
         .then(res => res.blob())
         .then(blob => {
@@ -119,7 +122,7 @@ export const ExportManager: React.FC = () => {
     } else {
       // Excel preview
       fetch(`${API_BASE}/api/exported-files/preview/${fileId}`, {
-        headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
+        headers: { 'Authorization': `Bearer ${activeToken}` }
       })
         .then(res => res.json())
         .then(data => {
@@ -167,7 +170,7 @@ export const ExportManager: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE}/api/exported-files/${fileId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
+        headers: { 'Authorization': `Bearer ${activeToken}` }
       });
       if (res.ok && selectedFolder) {
         fetchFiles(selectedFolder.id);
@@ -185,7 +188,7 @@ export const ExportManager: React.FC = () => {
     try {
       await fetch(`${API_BASE}/api/export-folders/${folder.id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
+        headers: { 'Authorization': `Bearer ${activeToken}` }
       });
       if (selectedFolder?.id === folder.id) setSelectedFolder(null);
       fetchFolders();
