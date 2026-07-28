@@ -1010,8 +1010,10 @@ app.get('/api/exported-files/download/:id', async (req: express.Request, res: ex
     }
 
     if (file.s3Key && isS3Configured) {
-      const url = await getPresignedDownloadUrl(file.s3Key);
-      res.redirect(url);
+      const buffer = await getS3ObjectBuffer(file.s3Key);
+      res.setHeader('Content-Type', file.format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.filename)}.${file.format}"`);
+      res.send(buffer);
       return;
     } else if (file.dataBase64) {
       const buffer = Buffer.from(file.dataBase64, 'base64');
