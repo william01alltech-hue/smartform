@@ -1,5 +1,10 @@
 import 'package:universal_io/io.dart';
 import 'dart:ui' as ui;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:web/web.dart' as web;
+import 'dart:js_interop';
+import '../config/env.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
@@ -317,36 +322,70 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
       ..._checkboxValues.map((key, val) => MapEntry(key, val.toString())),
     };
 
-    // 🔥 2. 算力轉移：改呼叫本地瀏覽器的 JS Worker 生成 Excel，不再傳給後端
     if (kIsWeb) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('🚀 點數已扣除！正在使用您的瀏覽器本地產出 Excel...'),
+          content: Text('🚀 正在上傳並由雲端產出報表...'),
           backgroundColor: Colors.indigoAccent,
           duration: Duration(seconds: 2),
         ),
       );
       
-      // Call JS Worker (Mocking the base64 passing for architecture completeness)
-      await ExcelWebService.fillTemplateWeb('mock_base64_template', textData, _imagePaths);
-      
-      // 成功提交後刪除對應的暫存草稿
-      if (widget.draftData != null) {
-        await OfflineService.deleteDraft(widget.draftData!['id'] as String);
+      try {
+        final uri = Uri.parse('${Env.serverBaseUrl}/api/templates/${widget.templateId}/export');
+        final request = http.MultipartRequest('POST', uri);
+        final token = OfflineService.getUserToken();
+        if (token != null) {
+          request.headers['Authorization'] = 'Bearer $token';
+        }
+        
+        request.fields['data'] = jsonEncode(textData);
+        // We don't have folder selection on frontend yet, so it won't be saved to DB, just downloaded
+        
+        for (final entry in _imagePaths.entries) {
+          final imageKey = entry.key;
+          final imagePath = entry.value;
+          if (imagePath.startsWith('blob:')) {
+            final resp = await http.get(Uri.parse(imagePath));
+            request.files.add(http.MultipartFile.fromBytes(imageKey, resp.bodyBytes, filename: 'image.jpg'));
+          }
+        }
+        
+        final response = await request.send();
+        if (response.statusCode == 200) {
+          final bytes = await response.stream.toBytes();
+          final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'));
+          final url = web.URL.createObjectURL(blob);
+          final anchor = web.document.createElement('a') as web.HTMLAnchorElement;
+          anchor.href = url;
+          anchor.download = 'exported_report.xlsx';
+          anchor.click();
+          web.URL.revokeObjectURL(url);
+          
+          if (widget.draftData != null) {
+            await OfflineService.deleteDraft(widget.draftData!['id'] as String);
+          }
+          
+          setState(() => _isExporting = false);
+          if (!mounted) return;
+          
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xFF1E293B),
+              title: const Text('✅ 匯出成功', style: TextStyle(color: Colors.white)),
+              content: const Text('雲端已產出 Excel，並已自動下載至您的裝置。', style: TextStyle(color: Colors.white70)),
+              actions: [TextButton(onPressed: () { Navigator.pop(ctx); Navigator.pop(context); }, child: const Text('完成'))],
+            ),
+          );
+        } else {
+          throw Exception('Server returned ${response.statusCode}');
+        }
+      } catch (e) {
+        setState(() => _isExporting = false);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('匯出失敗: $e'), backgroundColor: Colors.redAccent));
       }
-      
-      setState(() => _isExporting = false);
-      if (!mounted) return;
-      
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
-          title: const Text('✅ 匯出成功', style: TextStyle(color: Colors.white)),
-          content: const Text('已透過本地瀏覽器算力產出 Excel，並自動下載。', style: TextStyle(color: Colors.white70)),
-          actions: [TextButton(onPressed: () { Navigator.pop(ctx); Navigator.pop(context); }, child: const Text('完成'))],
-        ),
-      );
       return;
     }
 
