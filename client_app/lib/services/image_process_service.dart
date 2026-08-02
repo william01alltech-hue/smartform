@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:universal_io/io.dart';
 import 'package:image/image.dart' as img;
 
 class ImageProcessService {
@@ -65,8 +65,6 @@ class ImageProcessService {
       final file = File(path);
       if (await file.exists()) {
         await file.delete();
-        // Evict from Flutter image cache as well to release memory
-        FileImage(file).evict();
       }
     } catch (e) {
       // Ignore deletion errors (e.g., permission issue)

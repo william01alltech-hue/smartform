@@ -13,9 +13,10 @@ class ApiService {
   }
 
   static Map<String, String> get _headers {
+    final token = _token;
     return {
       'Content-Type': 'application/json',
-      if (_token != null) 'Authorization': _token!,
+      'Authorization': ?token,
     };
   }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 const MASTER_TOKEN = import.meta.env.VITE_MASTER_TOKEN || '';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import type { Language } from './context/LanguageContext';
@@ -104,10 +104,25 @@ interface VisualSheet {
 
 const queryParams = new URLSearchParams(window.location.search);
 const urlToken = queryParams.get('token');
-const activeToken = urlToken || MASTER_TOKEN;
+if (urlToken) {
+  try {
+    localStorage.setItem('admin_token', urlToken);
+  } catch (e) {
+    console.error('Failed to save token to localStorage', e);
+  }
+}
+const getSavedToken = () => {
+  try {
+    return localStorage.getItem('admin_token');
+  } catch (e) {
+    return null;
+  }
+};
+const activeToken = urlToken || getSavedToken() || MASTER_TOKEN;
 
 const Dashboard: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
+  const [inputToken, setInputToken] = useState(activeToken);
   const [fields, setFields] = useState<FieldConfig[]>([]);
   const [visualSheets, setVisualSheets] = useState<VisualSheet[]>([]);
   const [selectedSheetName, setSelectedSheetName] = useState<string>('');
@@ -479,6 +494,14 @@ const Dashboard: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#8b5cf6', boxShadow: '0 0 12px #8b5cf6' }} />
             <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '0.5px' }}>{isClientMode ? '表單自動化管理' : t('adminTitle')}</h1>
+            {!isClientMode && (
+              <button
+                onClick={() => window.location.href = '/'}
+                style={{ marginLeft: '12px', padding: '6px 12px', borderRadius: '6px', backgroundColor: '#3b82f6', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}
+              >
+                📱 開啟填報前台
+              </button>
+            )}
           </div>
           {/* Language Switcher dropdown */}
           <select
@@ -618,14 +641,30 @@ const Dashboard: React.FC = () => {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   type="text"
-                  readOnly
-                  value={activeToken}
-                  style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', backgroundColor: 'rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#a1a1aa', fontSize: '12px' }}
+                  value={inputToken}
+                  onChange={(e) => setInputToken(e.target.value)}
+                  style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '12px', outline: 'none' }}
+                  placeholder="請輸入主帳號金鑰 (ADMIN_TOKEN)"
                 />
                 <button
                   onClick={() => {
+                    if (inputToken.trim()) {
+                      try {
+                        localStorage.setItem('admin_token', inputToken.trim());
+                      } catch (e) {}
+                      window.location.href = `${window.location.origin}${window.location.pathname}?token=${inputToken.trim()}`;
+                    } else {
+                      alert('請輸入金鑰！');
+                    }
+                  }}
+                  style={{ padding: '6px 12px', borderRadius: '6px', backgroundColor: '#8b5cf6', border: 'none', color: '#fff', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                  切換金鑰
+                </button>
+                <button
+                  onClick={() => {
                     navigator.clipboard.writeText(activeToken);
-                    alert('已複製主帳號金鑰！可貼於手機 App 綁定。');
+                    alert('已複製當前金鑰！');
                   }}
                   style={{ padding: '6px 12px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', fontSize: '12px', cursor: 'pointer' }}
                 >

@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:universal_io/io.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -282,8 +282,9 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     final token = OfflineService.getUserToken();
     if (token != null) {
       final pts = await ApiService.getPointsStatus();
+      if (!mounted) return;
       final requiredPoints = widget.formConfig['pages'] ?? 1;
-      if (pts['total'] != null && (pts['total'] as int) < requiredPoints) {
+      if (pts?['total'] != null && (pts!['total'] as int) < requiredPoints) {
         setState(() => _isExporting = false);
         showDialog(
           context: context,
@@ -309,6 +310,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
 
     final draftId = DateTime.now().millisecondsSinceEpoch.toString();
     await _processSignatures();
+    if (!mounted) return;
 
     final textData = {
       ..._controllers.map((key, controller) => MapEntry(key, controller.text)),

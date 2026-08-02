@@ -1,17 +1,18 @@
 {
-  "services": {
-    "smartform-backend": {
-      "root": ".",
-      "entrypoint": "dist/app.js"
-    }
-  },
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": {
-        "type": "service",
-        "service": "smartform-backend"
+      "src": "dist/app.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["public/**", "app_data.sqlite"]
       }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/dist/app.js"
     }
   ]
 }

@@ -1,8 +1,17 @@
+import 'package:flutter/foundation.dart';
+
 class Env {
-  // 正式環境請填寫您的 Mac Studio 區域網路 IP 或對外網域，例如：'http://192.168.1.100:3000'
-  // 若使用本機模擬器開發，可維持 'http://localhost:3000' 或 'http://10.0.2.2:3000'
-  static const String serverBaseUrl = String.fromEnvironment(
-    'SERVER_URL',
-    defaultValue: 'http://localhost:3000',
-  );
+  static String get serverBaseUrl {
+    if (kIsWeb) {
+      final origin = Uri.base.origin;
+      if (origin.isNotEmpty && origin != 'null') {
+        return origin;
+      }
+      return '';
+    }
+    return const String.fromEnvironment(
+      'SERVER_URL',
+      defaultValue: 'http://192.168.1.109:3000',
+    );
+  }
 }

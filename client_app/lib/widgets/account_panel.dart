@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:universal_io/io.dart';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +11,7 @@ import '../services/api_service.dart';
 import 'dart:async';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../services/ad_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AccountPanel extends StatefulWidget {
   final VoidCallback onStateChanged;
@@ -30,7 +31,6 @@ class _AccountPanelState extends State<AccountPanel> with SingleTickerProviderSt
   // Points State
   int _freePoints = 0;
   int _paidPoints = 0;
-  int _totalPoints = 0;
   int _dailyAdWatchCount = 0;
   String _subscriptionPlan = 'personal_ad';
 
@@ -78,7 +78,6 @@ class _AccountPanelState extends State<AccountPanel> with SingleTickerProviderSt
       setState(() {
         _freePoints = status['points']['free'] ?? 0;
         _paidPoints = status['points']['paid'] ?? 0;
-        _totalPoints = status['points']['total'] ?? 0;
         _dailyAdWatchCount = status['dailyAdWatchCount'] ?? 0;
         _subscriptionPlan = status['subscriptionPlan'] ?? 'personal_ad';
       });
@@ -91,6 +90,7 @@ class _AccountPanelState extends State<AccountPanel> with SingleTickerProviderSt
       context: context,
       onUserEarnedReward: () async {
         final result = await ApiService.rewardPoints();
+        if (!mounted) return;
         if (result['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('🎉 恭喜！獲得 ${result['rewardPoints']} 點！')),
@@ -158,6 +158,8 @@ class _AccountPanelState extends State<AccountPanel> with SingleTickerProviderSt
           // Call our backend to actually validate receipt and grant points
           final result = await ApiService.purchasePoints(receiptData, source);
           setState(() => _isLoading = false);
+          
+          if (!mounted) return;
           
           if (result['success'] == true) {
             final int addedAmount = result['amount'] ?? 50;
@@ -249,7 +251,6 @@ class _AccountPanelState extends State<AccountPanel> with SingleTickerProviderSt
     setState(() {
       _statusMessage = '已清除綁定金鑰，切換回免費版。';
       _isSuccess = true;
-      _totalPoints = 0;
       _freePoints = 0;
       _paidPoints = 0;
     });
@@ -607,6 +608,23 @@ class _AccountPanelState extends State<AccountPanel> with SingleTickerProviderSt
                     ),
                   ),
                   const SizedBox(height: 12),
+                  if (currentRole == 'master') ...[
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        // Launch the admin panel URL
+                        launchUrl(Uri.parse('/admin/'), webOnlyWindowName: '_blank');
+                      },
+                      icon: const Icon(Icons.settings),
+                      label: const Text('前往管理後台'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   OutlinedButton.icon(
                     onPressed: _isLoading ? null : _logout,
                     icon: const Icon(Icons.logout, color: Colors.redAccent),

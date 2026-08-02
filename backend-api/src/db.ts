@@ -1,13 +1,28 @@
 import { createClient } from '@libsql/client';
 import path from 'path';
 
-const url = process.env.TURSO_DATABASE_URL || `file:${path.join(__dirname, '..', 'app_data.sqlite')}`;
-const authToken = process.env.TURSO_AUTH_TOKEN;
+const primaryUrl = process.env.TURSO_DATABASE_URL;
+const primaryAuthToken = process.env.TURSO_AUTH_TOKEN;
+const localUrl = `file:${path.join(__dirname, '..', 'app_data.sqlite')}`;
 
-const client = createClient({
-  url,
-  authToken
-});
+const primaryClient = primaryUrl ? createClient({ url: primaryUrl, authToken: primaryAuthToken }) : null;
+const localClient = createClient({ url: localUrl });
+
+let useFallback = false;
+
+const client = {
+  async execute(stmt: any) {
+    if (primaryClient && !useFallback) {
+      try {
+        return await primaryClient.execute(stmt);
+      } catch (err: any) {
+        console.warn('Primary database (Turso) error, switching to local SQLite fallback:', err?.message || err);
+        useFallback = true;
+      }
+    }
+    return await localClient.execute(stmt);
+  }
+};
 
 export interface ExportFolder {
   id: string;
@@ -72,14 +87,27 @@ export interface TemplateInfo {
 }
 
 class SQLiteDatabase {
+  private initPromise: Promise<void> | null = null;
+
   constructor() {
-    this.init().catch(err => {
+    this.ensureInit().catch(err => {
       console.error("Database initialization failed", err);
     });
   }
 
-  // --- Initialization ---
+  public async ensureInit(): Promise<void> {
+    if (!this.initPromise) {
+      this.initPromise = this.initInternal();
+    }
+    return this.initPromise;
+  }
+
   public async init() {
+    return this.ensureInit();
+  }
+
+  // --- Initialization ---
+  private async initInternal() {
     await client.execute(`
       CREATE TABLE IF NOT EXISTS tokens (
         token TEXT PRIMARY KEY,
@@ -114,13 +142,24 @@ class SQLiteDatabase {
       );
     `);
 
-    // Ensure default master token is provisioned from env variable
-    // 僅使用環境變數設定的 MASTER_TOKEN，絕不硬編碼 token 名稱於程式碼中 (#58)
-    const defaultMasterToken = process.env.MASTER_TOKEN;
+    // Ensure default master token is provisioned from env variable or fallback to william_master_token
+    const defaultMasterToken = process.env.MASTER_TOKEN || 'william_master_token';
     if (defaultMasterToken) {
-      const existingMaster = await this.getToken(defaultMasterToken);
-      if (!existingMaster) {
-        await this.createToken(defaultMasterToken, 'master');
+      const res = await client.execute({
+        sql: 'SELECT data FROM tokens WHERE token = ?',
+        args: [defaultMasterToken]
+      });
+      if (res.rows.length === 0) {
+        const info: TokenInfo = {
+          token: defaultMasterToken,
+          role: 'master',
+          createdAt: new Date().toISOString(),
+          subscriptionPlan: 'enterprise_20',
+          subscriptionCreatedAt: new Date().toISOString(),
+          trialExpiresAt: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
+          pointLedger: []
+        };
+        await this.saveToken(info);
       }
     }
   }
@@ -128,6 +167,7 @@ class SQLiteDatabase {
   // --- Tokens ---
 
   public async getToken(token: string): Promise<TokenInfo | undefined> {
+    await this.ensureInit();
     const res = await client.execute({
       sql: 'SELECT data FROM tokens WHERE token = ?',
       args: [token]

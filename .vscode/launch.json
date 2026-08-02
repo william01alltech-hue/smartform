@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "啟動 Smartform 後端偵錯 (TypeScript)",
+      "runtimeArgs": [
+        "-r",
+        "${workspaceFolder}/backend-api/node_modules/ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/backend-api/src/app.ts"
+      ],
+      "cwd": "${workspaceFolder}/backend-api",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "name": "啟動 Smartform App 偵錯 (Flutter)",
+      "cwd": "${workspaceFolder}/client_app",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart"
+    },
+    {
+      "name": "啟動 Smartform 管理後台 (Web/Vite)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/admin-web"
+    }
+  ]
+}

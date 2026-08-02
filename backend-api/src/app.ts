@@ -24,9 +24,16 @@ function escapeHtml(unsafe: string): string {
 }
 
 const app = express();
+
+// Trust Vercel's reverse proxy for express-rate-limit
+app.set('trust proxy', 1);
+
 const port = process.env.PORT || 3000;
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
 app.use((req, res, next) => {
   if (process.env.DISABLE_RATE_LIMIT === 'true') {
     return next();
@@ -39,7 +46,7 @@ app.use((req, res, next) => {
 });
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.split(',') 
-  : ['http://localhost:5173', 'http://localhost:3000'];
+  : ['*'];
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -66,14 +73,43 @@ const upload = multer({
 // --- Authentication & Token Routing ---
 
 // 1. Verify token and return user role information
-app.post('/api/auth/verify-token', verifyToken(), (req: express.Request, res: express.Response) => {
-  const tokenInfo = (req as any).tokenInfo;
-  res.json({
-    success: true,
-    token: tokenInfo.token,
-    role: tokenInfo.role,
-    masterToken: tokenInfo.masterToken
-  });
+// Accepts token from either Authorization header OR JSON body { token: "..." }
+app.post('/api/auth/verify-token', async (req: express.Request, res: express.Response): Promise<void> => {
+  try {
+    let token: string | undefined;
+
+    // Try Authorization header first
+    const authHeader = req.headers.authorization as string | undefined;
+    if (authHeader) {
+      token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+    }
+
+    // Fallback: try JSON body
+    if (!token && req.body && req.body.token) {
+      token = req.body.token as string;
+    }
+
+    if (!token) {
+      res.status(401).json({ error: 'Token required' });
+      return;
+    }
+
+    await db.ensureInit();
+    const tokenInfo = await db.getToken(token);
+    if (!tokenInfo) {
+      res.status(404).json({ error: 'Invalid token' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      token: tokenInfo.token,
+      role: tokenInfo.role,
+      masterToken: tokenInfo.masterToken
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // 2. Generate a member (sub-account) token under a master token
@@ -368,7 +404,14 @@ app.post(
 
 // 4. List all active templates accessible by the user's token (master or member)
 app.get('/api/templates', async (req: express.Request, res: express.Response) => {
-  const token = req.query.token as string;
+  // Accept token from query string OR Authorization header
+  let token = req.query.token as string | undefined;
+  if (!token) {
+    const authHeader = req.headers.authorization as string | undefined;
+    if (authHeader) {
+      token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+    }
+  }
   if (!token) {
     res.status(400).json({ error: 'Token is required' });
     return;
@@ -1089,6 +1132,18 @@ app.delete('/api/exported-files/:id', async (req: express.Request, res: express.
   }
 });
 
+// Serve admin-web frontend
+app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
+app.get('/admin/*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin/index.html'));
+});
+
+// Serve static frontend files from 'public' directory
+app.use(express.static(path.join(__dirname, '../public')));
+app.get('*', (req: express.Request, res: express.Response) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
 // Global error handling middleware (Catch Multer file size errors gracefully)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (err instanceof multer.MulterError) {
@@ -1100,3 +1155,4 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ error: 'Internal Server Error', details: err.message || err });
 });
 
+module.exports = app;
