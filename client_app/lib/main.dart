@@ -308,28 +308,33 @@ class _MyHomePageState extends State<MyHomePage> {
         final List<Map> finalTemplates = [];
 
         for (final temp in templatesList) {
-          final id = temp['id'] as String;
-          final title = temp['title'] as String;
-          final config = temp['config'] as Map;
-          final folder = (temp['folder'] as String?) ?? '未分類';
+          try {
+            final id = temp['id']?.toString() ?? '';
+            final title = temp['title']?.toString() ?? '未命名';
+            final config = temp['config'] is Map ? temp['config'] as Map : {};
+            final folderStr = temp['folder']?.toString() ?? '';
+            final folder = folderStr.trim().isEmpty ? '未分類' : folderStr;
 
-          String localExcelPath = '';
-          if (!kIsWeb) {
-            final oldList = OfflineService.getSyncedTemplates();
-            final matched = oldList.firstWhere(
-              (element) => element['id'] == id,
-              orElse: () => {},
-            );
-            localExcelPath = (matched['localExcelPath'] as String?) ?? '';
+            String localExcelPath = '';
+            if (!kIsWeb) {
+              final oldList = OfflineService.getSyncedTemplates();
+              final matched = oldList.firstWhere(
+                (element) => element['id'] == id,
+                orElse: () => {},
+              );
+              localExcelPath = (matched['localExcelPath'] as String?) ?? '';
+            }
+
+            finalTemplates.add({
+              'id': id,
+              'title': title,
+              'config': config,
+              'folder': folder,
+              'localExcelPath': localExcelPath,
+            });
+          } catch (itemErr) {
+            debugPrint('Failed to parse template item: $itemErr');
           }
-
-          finalTemplates.add({
-            'id': id,
-            'title': title,
-            'config': config,
-            'folder': folder,
-            'localExcelPath': localExcelPath,
-          });
         }
 
         await OfflineService.saveSyncedTemplates(finalTemplates);
