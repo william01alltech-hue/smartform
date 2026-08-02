@@ -901,10 +901,16 @@ app.post(
         let base64ToSave: string | undefined = generatedBase64;
         
         if (isS3Configured && finalBuffer) {
-          s3Key = `exports/${masterToken}/${fileId}.${format}`;
-          const mime = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-          await uploadToS3(s3Key, finalBuffer, mime);
-          base64ToSave = undefined; // Do not store in SQLite
+          try {
+            s3Key = `exports/${masterToken || 'master'}/${fileId}.${format}`;
+            const mime = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            await uploadToS3(s3Key, finalBuffer, mime);
+            base64ToSave = undefined; // Do not store in SQLite if uploaded to S3
+          } catch (s3Err) {
+            console.warn('S3 upload of exported file failed, falling back to SQLite database:', s3Err);
+            s3Key = undefined;
+            base64ToSave = generatedBase64;
+          }
         }
         
         await db.saveExportedFile(fileId, masterToken, targetFolderId, targetFilename, format, base64ToSave, s3Key);
