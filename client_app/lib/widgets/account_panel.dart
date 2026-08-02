@@ -611,8 +611,8 @@ class _AccountPanelState extends State<AccountPanel> with SingleTickerProviderSt
                   if (currentRole == 'master') ...[
                     ElevatedButton.icon(
                       onPressed: () {
-                        // Launch the admin panel URL
-                        launchUrl(Uri.parse('/admin/'), webOnlyWindowName: '_blank');
+                        // Launch the admin panel URL with current token
+                        launchUrl(Uri.parse('/admin/?token=${_tokenController.text}'), webOnlyWindowName: '_blank');
                       },
                       icon: const Icon(Icons.settings),
                       label: const Text('前往管理後台'),

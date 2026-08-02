@@ -9176,7 +9176,7 @@ _.c=c
 _.d=d},
 axH:function axH(a){this.a=a},
 axI:function axI(a){this.a=a},
-axV:function axV(){},
+axV:function axV(a){this.a=a},
 M4:function M4(){},
 Nk:function Nk(a){this.a=a},
 ml:function ml(a,b,c,d,e){var _=this
@@ -51375,7 +51375,7 @@ p=A.oc(B.j.dq(0.2),1)
 r=A.ff(m,A.d4(A.b([A.bo("\u8eab\u5206\uff1a"+(k?"\u4e3b\u5e33\u865f (Master)":"\u6210\u54e1\u526f\u5e33\u865f (Member)"),m,m,m,m,B.ae8,m,m,m),B.oe,A.bo("\u76ee\u524d\u65b9\u6848\uff1a"+n.z,m,m,m,m,A.f8(m,m,B.j.dq(0.7),m,m,m,m,m,m,m,m,13,m,m,m,m,m,!0,m,m,m,m,m,m,m,m),m,m,m)],f),B.aU,B.G,B.N),B.D,m,m,new A.ds(r,m,p,q,m,m,B.aG),m,m,m,B.PG,m,m,m)
 q=n.e?m:n.gaqH()
 q=A.b([r,B.bN,A.r7(B.QJ,B.agV,q,A.l1(m,m,B.eN,m,m,m,m,m,m,B.j,m,m,B.m1,m,new A.cf(A.cq(8),B.n),m,m,m,m,m)),B.kA],f)
-if(k)B.b.P(q,A.b([A.r7(B.QQ,B.agE,new A.axV(),A.l1(m,m,B.a4u,m,m,m,m,m,m,B.j,m,m,B.m1,m,new A.cf(A.cq(8),B.n),m,m,m,m,m)),B.kA],f))
+if(k)B.b.P(q,A.b([A.r7(B.QQ,B.agE,new A.axV(n),A.l1(m,m,B.a4u,m,m,m,m,m,m,B.j,m,m,B.m1,m,new A.cf(A.cq(8),B.n),m,m,m,m,m)),B.kA],f))
 k=n.e?m:n.galO()
 r=B.ci.dq(0.5)
 q.push(A.aNQ(B.QU,B.ahd,k,A.apd(m,m,m,m,m,m,m,m,m,m,m,m,B.m1,m,new A.cf(A.cq(8),B.n),new A.aT(r,1,B.t,-1),m,m,m,m)))
@@ -51547,7 +51547,7 @@ A.axI.prototype={
 $0(){return A.dD(this.a,!1).ep()},
 $S:0}
 A.axV.prototype={
-$0(){A.aPL(A.ey("/admin/",0,null),"_blank")},
+$0(){A.aPL(A.ey("/admin/?token="+this.a.d.a.a,0,null),"_blank")},
 $S:0}
 A.M4.prototype={
 l(){var s=this,r=s.c9$
