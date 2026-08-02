@@ -648,6 +648,19 @@ class _MyHomePageState extends State<MyHomePage> {
                           }
                         }
                         
+                        // Always upgrade draft's config to the latest cloud version if available
+                        if (templateId != 'local_default') {
+                          final synced = OfflineService.getSyncedTemplates();
+                          final matched = synced.firstWhere(
+                            (t) => t['id']?.toString() == templateId,
+                            orElse: () => {},
+                          );
+                          if (matched.isNotEmpty && matched['config'] != null) {
+                            formConfig = matched['config'] as Map;
+                            templatePath = matched['localExcelPath'] as String? ?? '';
+                          }
+                        }
+
                         if (formConfig.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('找不到此草稿對應的範本配置，無法開啟。'), backgroundColor: Colors.redAccent)
