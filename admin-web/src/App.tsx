@@ -377,6 +377,9 @@ const Dashboard: React.FC = () => {
     try {
       const response = await fetch(`${API_BASE}/api/templates/upload`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${activeToken}`
+        },
         body: formData,
       });
       if (!response.ok) throw new Error('解析失敗');
