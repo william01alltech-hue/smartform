@@ -226,7 +226,7 @@ const Dashboard: React.FC = () => {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': MASTER_TOKEN
+          'Authorization': activeToken
         },
         body: JSON.stringify({ token: activeToken })
       });
@@ -295,7 +295,7 @@ const Dashboard: React.FC = () => {
       const response = await fetch(`${API_BASE}/api/templates/save`, {
         method: 'POST',
         headers: {
-          'Authorization': MASTER_TOKEN
+          'Authorization': activeToken
         },
         body: formData
       });
@@ -347,7 +347,7 @@ const Dashboard: React.FC = () => {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': MASTER_TOKEN
+          'Authorization': activeToken
         },
         body: JSON.stringify({ title: newTitle, folder: newFolder })
       });
