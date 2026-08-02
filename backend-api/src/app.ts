@@ -374,9 +374,15 @@ app.post(
       let excelBase64: Buffer | undefined = req.file.buffer;
 
       if (isS3Configured) {
-        s3Key = `templates/${tokenInfo.masterToken}/${templateId}.xlsx`;
-        await uploadToS3(s3Key, req.file.buffer, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        excelBase64 = undefined; // Do not store in SQLite if we have S3
+        try {
+          s3Key = `templates/${tokenInfo.masterToken || 'master'}/${templateId}.xlsx`;
+          await uploadToS3(s3Key, req.file.buffer, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+          excelBase64 = undefined; // Do not store in SQLite if we have S3
+        } catch (s3Err) {
+          console.warn('S3 upload failed, falling back to SQLite database storage:', s3Err);
+          s3Key = undefined;
+          excelBase64 = req.file.buffer;
+        }
       }
 
       const saved = await db.saveTemplate(
