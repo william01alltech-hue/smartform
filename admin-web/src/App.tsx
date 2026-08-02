@@ -306,7 +306,7 @@ const Dashboard: React.FC = () => {
         fetchTemplates(); // Refresh template list
       } else {
         setPublishStatus('error');
-        alert('發布失敗: ' + data.error);
+        alert('發布失敗: ' + data.error + (data.details ? '\n詳細資訊: ' + data.details : ''));
       }
     } catch (e) {
       console.error(e);
