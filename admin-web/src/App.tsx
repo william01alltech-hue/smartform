@@ -132,6 +132,7 @@ const Dashboard: React.FC = () => {
   const [folder, setFolder] = useState(''); // Default to empty (Uncategorized)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [hasUploaded, setHasUploaded] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [highlightedRangeStr, setHighlightedRangeStr] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(true);
   const [showConfig, setShowConfig] = useState(true);
@@ -280,6 +281,9 @@ const Dashboard: React.FC = () => {
     if (folder.trim()) {
       formData.append('folder', folder.trim());
     }
+    if (editingTemplateId) {
+      formData.append('templateId', editingTemplateId);
+    }
     
     const configPayload = {
       title,
@@ -333,6 +337,50 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const loadTemplateFromCloud = async (tpl: any) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/templates/${tpl.id}/excel`, {
+        headers: { 'Authorization': activeToken }
+      });
+      if (!res.ok) throw new Error('下載範本 Excel 失敗');
+      const blob = await res.blob();
+      const file = new File([blob], `${tpl.title}.xlsx`, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      setSelectedFile(file);
+
+      const formData = new FormData();
+      formData.append('template', file);
+      const uploadRes = await fetch(`${API_BASE}/api/templates/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${activeToken}` },
+        body: formData,
+      });
+      if (!uploadRes.ok) throw new Error('解析範本 Excel 失敗');
+      const uploadConfig = await uploadRes.json();
+      setVisualSheets(uploadConfig.visualSheets || []);
+
+      setTitle(tpl.title);
+      setFolder(tpl.folder || '');
+      setFields(tpl.config.fields || []);
+      setSelectedSheetName(tpl.config.selectedSheetName || (uploadConfig.visualSheets?.[0]?.name || ''));
+      setTableListConfig(tpl.config.tableListConfig || null);
+      setEditingTemplateId(tpl.id);
+      
+      setShowConfig(true);
+      setShowPreview(true);
+      setShowAppUI(true);
+      setShowExportManager(false);
+      setHasUploaded(true);
+      
+      alert('🎉 成功從雲端載入表單欄位與 Excel 樣板配置！您可以在左側進行修改並重新發布。');
+    } catch (e: any) {
+      console.error(e);
+      alert('載入失敗: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renameTemplate = async (id: string, currentTitle: string, currentFolder: string) => {
     const newTitle = window.prompt('請輸入新的範本名稱：', currentTitle);
     if (newTitle === null) return;
@@ -369,6 +417,7 @@ const Dashboard: React.FC = () => {
     if (!file) return;
     
     setSelectedFile(file);
+    setEditingTemplateId(null);
     setLoading(true);
 
     const formData = new FormData();
@@ -588,19 +637,27 @@ const Dashboard: React.FC = () => {
                     更新: {new Date(tpl.updatedAt).toLocaleString()}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '6px', flexShrink: 0, marginTop: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0, marginTop: 'auto' }}>
                   <button
-                    onClick={() => renameTemplate(tpl.id, tpl.title, tpl.folder || '未分類')}
-                    style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', flex: 1 }}
+                    onClick={() => loadTemplateFromCloud(tpl)}
+                    style={{ background: '#a855f7', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
                   >
-                    ✏️ 編輯
+                    ✏️ 編輯欄位與樣板
                   </button>
-                  <button
-                    onClick={() => deleteTemplate(tpl.id)}
-                    style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', flex: 1 }}
-                  >
-                    🗑️ 刪除
-                  </button>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      onClick={() => renameTemplate(tpl.id, tpl.title, tpl.folder || '未分類')}
+                      style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '4px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1 }}
+                    >
+                      🏷️ 改名/移動
+                    </button>
+                    <button
+                      onClick={() => deleteTemplate(tpl.id)}
+                      style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1 }}
+                    >
+                      🗑️ 刪除
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

@@ -335,10 +335,11 @@ app.post(
         title: z.string().optional(),
         config: z.string(),
         folder: z.string().optional(),
-        pages: z.string().optional()
+        pages: z.string().optional(),
+        templateId: z.string().optional()
       });
       const parsed = schema.parse(req.body);
-      const { token, title, config, folder, pages } = parsed;
+      const { token, title, config, folder, pages, templateId: inputTemplateId } = parsed;
 
       const tokenInfo = (req as any).tokenInfo;
 
@@ -347,9 +348,8 @@ app.post(
       const templatesForToken = await db.getTemplatesForToken(tokenInfo.token);
       const currentCount = templatesForToken.length;
       
-      // If this is an existing template update, we don't count it as a new one for capacity check
-      // Wait, /save currently always creates a new template ID. Let's just check if they are at limit.
-      if (currentCount >= limit) {
+      const isUpdate = Boolean(inputTemplateId);
+      if (!isUpdate && currentCount >= limit) {
         res.status(403).json({ error: `Storage capacity reached. Limit: ${limit}. Please purchase an add-on or upgrade your plan.` });
         return;
       }
@@ -369,7 +369,7 @@ app.post(
 
       const parsedPages = pages ? parseInt(pages, 10) : 1;
 
-      const templateId = uuidv4();
+      const templateId = inputTemplateId || uuidv4();
       let s3Key: string | undefined = undefined;
       let excelBase64: Buffer | undefined = req.file.buffer;
 
