@@ -68,6 +68,8 @@ class SyncService {
       final templatePath = item['templatePath'] as String?;
       final dataMap = Map<String, String>.from(item['data'] ?? {});
       final imagesMap = Map<String, String>.from(item['images'] ?? {});
+      final folderId = item['folderId'] as String?;
+      final filename = item['filename'] as String?;
 
       if (templateId == null || templatePath == null || (kIsWeb == false && !File(templatePath).existsSync())) {
         debugPrint('Template file not found at $templatePath, skipping sync for $id');
@@ -75,7 +77,7 @@ class SyncService {
         continue;
       }
 
-      int statusCode = await _uploadForm(templateId, templatePath, dataMap, imagesMap);
+      int statusCode = await _uploadForm(templateId, templatePath, dataMap, imagesMap, folderId: folderId, filename: filename);
       if (statusCode == 200) {
         debugPrint('Sync successful for form: $id');
         // Clean up compressed cache files after successful upload to free device storage
@@ -102,8 +104,10 @@ class SyncService {
     String templateId,
     String templatePath,
     Map<String, String> data,
-    Map<String, String> images,
-  ) async {
+    Map<String, String> images, {
+    String? folderId,
+    String? filename,
+  }) async {
     try {
       final uri = Uri.parse('$serverBaseUrl/api/templates/$templateId/export');
       final request = http.MultipartRequest('POST', uri);
@@ -119,6 +123,8 @@ class SyncService {
 
       // 2. Add text fields data payload as JSON string
       request.fields['data'] = jsonEncode(data);
+      if (folderId != null) request.fields['folderId'] = folderId;
+      if (filename != null && filename.isNotEmpty) request.fields['filename'] = filename;
 
       // 3. Add images
       for (final entry in images.entries) {

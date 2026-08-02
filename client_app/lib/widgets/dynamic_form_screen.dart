@@ -260,7 +260,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
 
   bool _isExporting = false;
 
-  void _submitForm() async {
+  Future<void> _submitForm(String? filename, String? folderId) async {
     if (!_formKey.currentState!.validate()) return;
     if (_isExporting) return;
 
@@ -340,7 +340,8 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
         }
         
         request.fields['data'] = jsonEncode(textData);
-        // We don't have folder selection on frontend yet, so it won't be saved to DB, just downloaded
+        if (folderId != null) request.fields['folderId'] = folderId;
+        if (filename != null && filename.isNotEmpty) request.fields['filename'] = filename;
         
         for (final entry in _imagePaths.entries) {
           final imageKey = entry.key;
@@ -397,6 +398,8 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
       'data': textData,
       'images': _imagePaths,
       'fields': widget.formConfig['fields'], 
+      'filename': filename,
+      'folderId': folderId,
     };
 
     await OfflineService.enqueueSubmission(draftId, payload);
@@ -418,6 +421,85 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
       ),
     );
     Navigator.of(context).pop();
+  }
+
+  Future<void> _showExportDialog() async {
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('請填寫所有必填欄位'), backgroundColor: Colors.redAccent),
+      );
+      return;
+    }
+    
+    setState(() => _isExporting = true);
+    final folders = await ApiService.getExportFolders();
+    setState(() => _isExporting = false);
+    if (!mounted) return;
+
+    String? selectedFolder;
+    final filenameController = TextEditingController(text: widget.formConfig['title'] ?? '表單匯出');
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setStateSB) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1E293B),
+              title: const Text('匯出設定', style: TextStyle(color: Colors.white)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: filenameController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: '檔案名稱',
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      filled: true,
+                      fillColor: const Color(0xFF0F172A),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selectedFolder,
+                    dropdownColor: const Color(0xFF1E293B),
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                    decoration: InputDecoration(
+                      labelText: '儲存至資料夾 (選填)',
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      filled: true,
+                      fillColor: const Color(0xFF0F172A),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                    ),
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('無 (不儲存至資料夾)')),
+                      ...folders.map((f) => DropdownMenuItem(value: f['id'] as String, child: Text(f['name'] as String))),
+                    ],
+                    onChanged: (val) {
+                      setStateSB(() => selectedFolder = val);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消', style: TextStyle(color: Colors.white54))),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
+                  child: const Text('確認匯出', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+
+    if (result == true) {
+      await _submitForm(filenameController.text, selectedFolder);
+    }
   }
 
   Future<void> _selectDate(BuildContext context, String fieldName, String label) async {
@@ -877,7 +959,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _isExporting ? null : _submitForm,
+                      onPressed: _isExporting ? null : _showExportDialog,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         foregroundColor: Colors.white,

@@ -91,4 +91,18 @@ class ApiService {
       return null;
     }
   }
+
+  /// 取得匯出資料夾列表
+  static Future<List<dynamic>> getExportFolders() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/export-folders'), headers: _headers);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      debugPrint('API Error (getExportFolders): $e');
+      return [];
+    }
+  }
 }
