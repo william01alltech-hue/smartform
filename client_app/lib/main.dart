@@ -289,6 +289,57 @@ class _MyHomePageState extends State<MyHomePage> {
       _pendingSyncCount = OfflineService.getSyncCount();
       _drafts = OfflineService.getAllDrafts();
     });
+    _autoSyncTemplates();
+  }
+
+  Future<void> _autoSyncTemplates() async {
+    final token = OfflineService.getUserToken();
+    if (token == null || token.isEmpty || !_isOnline) return;
+
+    try {
+      final baseUrl = SyncService().serverBaseUrl;
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/templates?token=$token'),
+        headers: {'Authorization': token},
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final List templatesList = jsonDecode(response.body);
+        final List<Map> finalTemplates = [];
+
+        for (final temp in templatesList) {
+          final id = temp['id'] as String;
+          final title = temp['title'] as String;
+          final config = temp['config'] as Map;
+          final folder = (temp['folder'] as String?) ?? '未分類';
+
+          String localExcelPath = '';
+          if (!kIsWeb) {
+            final oldList = OfflineService.getSyncedTemplates();
+            final matched = oldList.firstWhere(
+              (element) => element['id'] == id,
+              orElse: () => {},
+            );
+            localExcelPath = (matched['localExcelPath'] as String?) ?? '';
+          }
+
+          finalTemplates.add({
+            'id': id,
+            'title': title,
+            'config': config,
+            'folder': folder,
+            'localExcelPath': localExcelPath,
+          });
+        }
+
+        await OfflineService.saveSyncedTemplates(finalTemplates);
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    } catch (e) {
+      debugPrint('Auto sync templates failed: $e');
+    }
   }
 
   void _toggleNetwork() {
