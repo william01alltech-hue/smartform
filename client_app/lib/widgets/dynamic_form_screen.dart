@@ -55,7 +55,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
       final String name = field['name'];
       final String type = field['type'];
 
-      if (type == 'text' || type == 'number' || type == 'date' || type == 'mobile' || type == 'tel') {
+      if (type == 'text' || type == 'number' || type == 'date' || type == 'mobile' || type == 'tel' || type == 'dropdown') {
         final draftVal = draftFields[name]?.toString() ?? '';
         _controllers[name] = TextEditingController(text: draftVal);
         if (type == 'mobile') {
@@ -516,6 +516,65 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
                           validator: (value) {
                             if (isRequired && (value == null || value.trim().isEmpty)) {
                               return '請選擇日期';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                } else if (type == 'dropdown') {
+                  final String optionsStr = field['dropdownOptions']?.toString() ?? '';
+                  final List<String> options = optionsStr.split('\n').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+                  
+                  // Ensure current value is valid or null
+                  String? currentValue = _controllers[name]?.text;
+                  if (currentValue != null && currentValue.isEmpty) {
+                    currentValue = null;
+                  } else if (currentValue != null && !options.contains(currentValue)) {
+                    currentValue = null;
+                    _controllers[name]?.text = '';
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label + (isRequired ? ' *' : ''),
+                          softWrap: true,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white70),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: currentValue,
+                          dropdownColor: const Color(0xFF1E293B),
+                          style: const TextStyle(color: Colors.white, fontSize: 15),
+                          decoration: InputDecoration(
+                            fillColor: const Color(0xFF1E293B),
+                            filled: true,
+                            hintText: '請選擇 $label',
+                            hintStyle: const TextStyle(color: Colors.white54),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          items: options.map((opt) {
+                            return DropdownMenuItem<String>(
+                              value: opt,
+                              child: Text(opt),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              _controllers[name]?.text = val ?? '';
+                            });
+                          },
+                          validator: (value) {
+                            if (isRequired && (value == null || value.trim().isEmpty)) {
+                              return '此欄位必須選擇';
                             }
                             return null;
                           },
