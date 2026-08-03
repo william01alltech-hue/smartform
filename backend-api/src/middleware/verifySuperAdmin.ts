@@ -19,6 +19,11 @@ export function verifySuperAdmin(req: Request, res: Response, next: NextFunction
     }
   }
 
+  // Fallback to body token for POST requests
+  if (!token && req.body && req.body.token) {
+    token = req.body.token;
+  }
+
   if (token === superAdminToken) {
     next();
   } else {
