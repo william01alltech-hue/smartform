@@ -6,6 +6,7 @@ import { ExcelService } from './services/excelService';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { verifyToken } from './middleware/auth';
+import { verifySuperAdmin } from './middleware/verifySuperAdmin';
 import { z } from 'zod';
 import { db } from './db';
 import puppeteer from 'puppeteer';
@@ -109,6 +110,120 @@ app.post('/api/auth/verify-token', async (req: express.Request, res: express.Res
     });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// --- Super Admin Tenant Management ---
+app.get('/api/super/tenants', verifySuperAdmin, async (req: express.Request, res: express.Response) => {
+  try {
+    const tenants = await db.getTenants();
+    const stats = {
+      total: tenants.length,
+      pro: tenants.filter(t => t.plan === 'personal_pro').length,
+      enterprise: tenants.filter(t => t.plan.startsWith('enterprise')).length,
+      suspended: tenants.filter(t => t.status === 'suspended').length
+    };
+    res.json({ success: true, tenants, stats });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/super/tenants', verifySuperAdmin, async (req: express.Request, res: express.Response) => {
+  try {
+    console.log('Received POST /api/super/tenants:', req.body);
+    const body = req.body || {};
+    
+    // Support various naming conventions from frontend
+    const name = body.name || body.company || body.tenantName || body.companyName;
+    const plan = body.plan || body.subscriptionPlan || body.authorizationPlan || 'enterprise';
+    const email = body.email || body.contactEmail;
+    const expiryDate = body.expiryDate || body.expireAt;
+    const maxMembers = body.maxMembers || 5;
+
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'Name (company/tenantName) is required' });
+    }
+    
+    // Generate a unique ID and master token for the new tenant
+    const id = `tenant_${uuidv4()}`;
+    const masterToken = `master_${uuidv4().replace(/-/g, '')}`;
+    
+    const newTenant = {
+      id,
+      name,
+      status: 'active' as const,
+      plan,
+      maxMembers,
+      masterToken,
+      createdAt: new Date().toISOString()
+    };
+    
+    await db.saveTenant(newTenant);
+    
+    // Provision the master token in the tokens table as well
+    await db.saveToken({
+      token: masterToken,
+      role: 'master',
+      createdAt: new Date().toISOString(),
+      subscriptionPlan: plan,
+      subscriptionCreatedAt: new Date().toISOString(),
+      trialExpiresAt: expiryDate ? new Date(expiryDate).toISOString() : new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
+      pointLedger: []
+    });
+
+    res.json({ success: true, tenant: newTenant });
+  } catch (e: any) {
+    console.error('Error in POST /api/super/tenants:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.put('/api/super/tenants/:id', verifySuperAdmin, async (req: express.Request, res: express.Response) => {
+  try {
+    const { id } = req.params;
+    const { name, plan, maxMembers, status } = req.body;
+    
+    const tenant = await db.getTenantById(id);
+    if (!tenant) {
+      return res.status(404).json({ success: false, error: 'Tenant not found' });
+    }
+
+    if (name) tenant.name = name;
+    if (plan) tenant.plan = plan;
+    if (maxMembers !== undefined) tenant.maxMembers = maxMembers;
+    if (status) tenant.status = status;
+    
+    await db.saveTenant(tenant);
+    
+    // Update the corresponding master token subscription if needed
+    const masterTokenInfo = await db.getToken(tenant.masterToken);
+    if (masterTokenInfo) {
+      if (plan) masterTokenInfo.subscriptionPlan = plan;
+      await db.saveToken(masterTokenInfo);
+    }
+    
+    res.json({ success: true, tenant });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.delete('/api/super/tenants/:id', verifySuperAdmin, async (req: express.Request, res: express.Response) => {
+  try {
+    const { id } = req.params;
+    const tenant = await db.getTenantById(id);
+    if (!tenant) {
+      return res.status(404).json({ success: false, error: 'Tenant not found' });
+    }
+    
+    // Optionally we could mark as deleted instead of hard delete
+    tenant.status = 'suspended';
+    await db.saveTenant(tenant);
+    
+    res.json({ success: true, message: 'Tenant suspended' });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 

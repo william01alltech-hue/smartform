@@ -8,16 +8,22 @@ const localUrl = `file:${path.join(__dirname, '..', 'app_data.sqlite')}`;
 const primaryClient = primaryUrl ? createClient({ url: primaryUrl, authToken: primaryAuthToken }) : null;
 const localClient = createClient({ url: localUrl });
 
-let useFallback = false;
-
 const client = {
   async execute(stmt: any) {
-    if (primaryClient && !useFallback) {
+    if (primaryClient) {
       try {
         return await primaryClient.execute(stmt);
       } catch (err: any) {
-        console.warn('Primary database (Turso) error, switching to local SQLite fallback:', err?.message || err);
-        useFallback = true;
+        // Retry once after 500ms for transient fetch errors (Turso cold start)
+        console.warn('Primary database (Turso) error on first try, retrying in 500ms...', err?.message || err);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+          return await primaryClient.execute(stmt);
+        } catch (retryErr: any) {
+          console.warn('Primary database (Turso) error on retry:', retryErr?.message || retryErr);
+          // Fallback to local DB. Note: writes will fail on Vercel read-only FS.
+          return await localClient.execute(stmt);
+        }
       }
     }
     return await localClient.execute(stmt);
@@ -86,6 +92,16 @@ export interface TemplateInfo {
   pages?: number;
 }
 
+export interface TenantInfo {
+  id: string;
+  name: string;
+  status: 'active' | 'suspended';
+  plan: 'personal_ad' | 'personal_pro' | 'enterprise_5' | 'enterprise_10' | 'enterprise_20' | 'enterprise';
+  maxMembers: number;
+  masterToken: string;
+  createdAt: string;
+}
+
 class SQLiteDatabase {
   private initPromise: Promise<void> | null = null;
 
@@ -108,13 +124,14 @@ class SQLiteDatabase {
 
   // --- Initialization ---
   private async initInternal() {
-    await client.execute(`
+    const tableQueries = [
+      `
       CREATE TABLE IF NOT EXISTS tokens (
         token TEXT PRIMARY KEY,
         data TEXT NOT NULL
       );
-    `);
-    await client.execute(`
+      `,
+      `
       CREATE TABLE IF NOT EXISTS export_folders (
         id TEXT PRIMARY KEY,
         masterToken TEXT NOT NULL,
@@ -122,8 +139,8 @@ class SQLiteDatabase {
         parentId TEXT,
         createdAt TEXT NOT NULL
       );
-    `);
-    await client.execute(`
+      `,
+      `
       CREATE TABLE IF NOT EXISTS exported_files (
         id TEXT PRIMARY KEY,
         masterToken TEXT NOT NULL,
@@ -134,13 +151,37 @@ class SQLiteDatabase {
         s3Key TEXT,
         createdAt TEXT NOT NULL
       );
-    `);
-    await client.execute(`
+      `,
+      `
       CREATE TABLE IF NOT EXISTS templates (
         id TEXT PRIMARY KEY,
         data TEXT NOT NULL
       );
-    `);
+      `,
+      `
+      CREATE TABLE IF NOT EXISTS tenants (
+        id TEXT PRIMARY KEY,
+        data TEXT NOT NULL
+      );
+      `
+    ];
+
+    // Ensure schema exists on both Turso and Local fallback
+    for (const query of tableQueries) {
+      if (primaryClient) {
+        try {
+          await primaryClient.execute(query);
+        } catch (err: any) {
+          console.warn('Failed to init table on Turso, ensuring local...', err?.message || err);
+        }
+      }
+      try {
+        await localClient.execute(query);
+      } catch (err: any) {
+        // Vercel filesystem is read-only, CREATE TABLE IF NOT EXISTS might throw.
+        console.warn('Failed to init table on local DB (might be read-only on Vercel):', err?.message || err);
+      }
+    }
 
     // Ensure default master token is provisioned from env variable or fallback to william_master_token
     const defaultMasterToken = process.env.MASTER_TOKEN || 'william_master_token';
@@ -176,7 +217,7 @@ class SQLiteDatabase {
     return JSON.parse(res.rows[0].data as string);
   }
 
-  private async saveToken(info: TokenInfo): Promise<void> {
+  public async saveToken(info: TokenInfo): Promise<void> {
     info.updatedAt = new Date().toISOString();
     await client.execute({
       sql: 'INSERT OR REPLACE INTO tokens (token, data) VALUES (?, ?)',
@@ -666,6 +707,39 @@ class SQLiteDatabase {
       args: [newTmpl.id, JSON.stringify(newTmpl)]
     });
     return newTmpl;
+  }
+
+  // --- Tenants ---
+  public async getTenants(): Promise<TenantInfo[]> {
+    const res = await client.execute('SELECT data FROM tenants');
+    return res.rows.map(row => JSON.parse(row.data as string) as TenantInfo);
+  }
+
+  public async getTenantById(id: string): Promise<TenantInfo | null> {
+    const res = await client.execute({
+      sql: 'SELECT data FROM tenants WHERE id = ?',
+      args: [id]
+    });
+    if (res.rows.length === 0) return null;
+    return JSON.parse(res.rows[0].data as string) as TenantInfo;
+  }
+
+  public async saveTenant(tenant: TenantInfo): Promise<void> {
+    await client.execute({
+      sql: `
+        INSERT INTO tenants (id, data)
+        VALUES (?, ?)
+        ON CONFLICT(id) DO UPDATE SET data=excluded.data;
+      `,
+      args: [tenant.id, JSON.stringify(tenant)]
+    });
+  }
+
+  public async deleteTenant(id: string): Promise<void> {
+    await client.execute({
+      sql: 'DELETE FROM tenants WHERE id = ?',
+      args: [id]
+    });
   }
 }
 
