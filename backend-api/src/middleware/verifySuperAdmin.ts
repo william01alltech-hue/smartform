@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
 export function verifySuperAdmin(req: Request, res: Response, next: NextFunction): void {
-  const superAdminToken = process.env.SUPER_ADMIN_TOKEN;
+  const superAdminToken = process.env.SUPER_ADMIN_TOKEN || process.env.MASTER_TOKEN;
   if (!superAdminToken) {
     console.error('SUPER_ADMIN_TOKEN is not configured on the server.');
     res.status(500).json({ error: 'Server configuration error' });
